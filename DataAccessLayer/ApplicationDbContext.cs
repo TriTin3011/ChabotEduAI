@@ -1,0 +1,66 @@
+using DataAccessLayer.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace DataAccessLayer
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        {
+        }
+
+        public DbSet<User> Users { get; set; }
+        public DbSet<Document> Documents { get; set; }
+        public DbSet<ChatSession> ChatSessions { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<Subject> Subjects { get; set; }
+        public DbSet<Chapter> Chapters { get; set; }
+        public DbSet<DocumentChunk> DocumentChunks { get; set; }
+        public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.HasPostgresExtension("vector");
+
+            base.OnModelCreating(modelBuilder);
+            
+            // Seed 1 vài dữ liệu demo
+            modelBuilder.Entity<User>().HasData(
+                new User { Id = 1, Username = "student", PasswordHash = "student123", Role = "Student" },
+                new User { Id = 2, Username = "lecturer", PasswordHash = "lecturer123", Role = "Lecturer" },
+                new User { Id = 3, Username = "admin", PasswordHash = "admin123", Role = "Admin" }
+            );
+
+            modelBuilder.Entity<Subject>()
+                .HasOne(s => s.Lecturer)
+                .WithMany(u => u.AssignedSubjects)
+                .HasForeignKey(s => s.LecturerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Subject>().HasData(
+                new Subject { Id = 1, Code = "PRN222", Name = "C# Nâng cao", LecturerId = 2 },
+                new Subject { Id = 2, Code = "AI101", Name = "Nhập môn AI", LecturerId = 2 }
+            );
+
+            modelBuilder.Entity<Chapter>().HasData(
+                new Chapter { Id = 1, SubjectId = 1, Title = "Chương 1: .NET Core và C# Nâng cao", OrderIndex = 1 },
+                new Chapter { Id = 2, SubjectId = 1, Title = "Chương 2: Entity Framework Core", OrderIndex = 2 },
+                new Chapter { Id = 3, SubjectId = 2, Title = "Chương 1: Tổng quan AI", OrderIndex = 1 }
+            );
+
+            // Mock Data for documents
+            modelBuilder.Entity<Document>().HasData(
+                new Document { Id = 1, SubjectId = 2, ChapterId = 3, Title = "Bài giảng Nhập môn AI", FileType = "pdf", Status = "Indexed", Content = "Đây là nội dung bài giảng Nhập môn AI.", FileUrl = "/files/ai101.pdf" },
+                new Document { Id = 2, SubjectId = 1, ChapterId = 1, Title = "Bài tập lớn C# nâng cao", FileType = "docx", Status = "Indexed", Content = "Yêu cầu bài tập lớn C#...", FileUrl = "/files/prn222_btl.docx" },
+                new Document { Id = 3, SubjectId = 1, ChapterId = 2, Title = "Slide EF Core", FileType = "pptx", Status = "Indexed", Content = "Slide bài giảng Entity Framework Core...", FileUrl = "/files/prn222_efcore.pptx" }
+            );
+
+            // Seed dữ liệu gói mặc định
+            modelBuilder.Entity<SubscriptionPlan>().HasData(
+                new SubscriptionPlan { Id = 1, Name = "Free",    Description = "Gói miễn phí cơ bản",            Price = 0,      MonthlyQuestionLimit = 5,   IsActive = true, SortOrder = 1 },
+                new SubscriptionPlan { Id = 2, Name = "Basic",   Description = "Gói cơ bản 100 câu hỏi/tháng",  Price = 50000,  MonthlyQuestionLimit = 100,  IsActive = true, SortOrder = 2 },
+                new SubscriptionPlan { Id = 3, Name = "Premium", Description = "Gói cao cấp không giới hạn",    Price = 150000, MonthlyQuestionLimit = -1,   IsActive = true, SortOrder = 3 }
+            );
+        }
+    }
+}

@@ -1,0 +1,35 @@
+@page
+@model PresentationLayer.Pages.Lecturer.MySubjectsModel
+@{
+    ViewData["Title"] = "Môn học phụ trách";
+    ViewBag.ActiveMenu = "LecturerSubjects";
+}
+
+<div class="main-wrapper">
+    <div style="padding: 30px;">
+        <h1 style="color: var(--blue); font-weight: 900; margin-bottom: 20px; font-size: 28px; text-transform: uppercase;">
+            MÔN HỌC PHỤ TRÁCH
+        </h1>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+            @foreach (var subject in Model.Subjects)
+            {
+                <div style="background-color: var(--white); border: var(--border); box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column;">
+                    <div style="font-weight: 900; font-size: 24px; color: var(--black); margin-bottom: 5px;">@subject.Code</div>
+                    <div style="font-weight: 700; font-size: 16px; color: #555; margin-bottom: 20px; flex: 1;">@subject.Name</div>
+                    
+                    <a asp-page="/Lecturer/ManageSubject" asp-route-id="@subject.Id" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 2px solid var(--black); padding: 10px 15px; font-weight: 800; text-align: center; text-decoration: none; box-shadow: 2px 2px 0px var(--black); margin-top: auto;">
+                        <i class="fa-solid fa-folder-open"></i> QUẢN LÝ TÀI LIỆU
+                    </a>
+                </div>
+            }
+
+            @if (!Model.Subjects.Any())
+            {
+                <div style="grid-column: 1 / -1; padding: 40px; text-align: center; border: 3px dashed #000; background: #fff; font-weight: 800; font-style: italic;">
+                    Bạn chưa được phân công phụ trách môn học nào.
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,253 @@
+@page "{id:int}"
+@model PresentationLayer.Pages.Lecturer.ManageSubjectModel
+@{
+    ViewData["Title"] = "Quản lý môn học " + Model.Subject?.Code;
+    ViewBag.ActiveMenu = "LecturerSubjects";
+    // Helper: chuyển UTC → Giờ Việt Nam (UTC+7)
+    var vnZone = TimeZoneInfo.FindSystemTimeZoneById(
+        System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)
+            ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+    string ToVnTime(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(utc, vnZone).ToString("dd/MM/yyyy HH:mm");
+}
+
+<div class="main-wrapper">
+    <div style="padding: 30px;">
+        <div style="margin-bottom: 20px;">
+            <a asp-page="/Lecturer/MySubjects" style="color: var(--black); text-decoration: none; font-weight: 800; font-size: 14px;">
+                <i class="fa-solid fa-arrow-left"></i> QUAY LẠI MÔN PHỤ TRÁCH
+            </a>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <h1 style="color: var(--blue); font-weight: 900; font-size: 28px; text-transform: uppercase;">
+                [@Model.Subject.Code] @Model.Subject.Name
+            </h1>
+
+            @if(Model.IsOwner)
+            {
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" onclick="openChapterModal(0, '')" class="brutal-btn" style="background-color: var(--green); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
+                        <i class="fa-solid fa-plus"></i> THÊM CHƯƠNG
+                    </button>
+                    <button type="button" onclick="openUploadModal()" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
+                        <i class="fa-solid fa-upload"></i> TẢI TÀI LIỆU
+                    </button>
+                </div>
+            }
+        </div>
+        <p style="font-weight: 700; color: #555; margin-bottom: 30px;">Quản lý cấu trúc chương học và tài liệu</p>
+
+        <!-- Tài liệu chung của môn học (Không thuộc chương nào) -->
+        @{ var subjectDocs = Model.Subject.Documents.Where(d => d.ChapterId == null).ToList(); }
+        @if (subjectDocs.Any())
+        {
+            <div style="background-color: var(--white); border: var(--border); box-shadow: 4px 4px 0px var(--black); padding: 20px; margin-bottom: 20px;">
+                <h2 style="font-weight: 900; font-size: 18px; color: var(--blue); border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">TÀI LIỆU CHUNG</h2>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    @foreach (var doc in subjectDocs)
+                    {
+                        <div style="background-color: var(--bg); border: 2px solid var(--black); padding: 10px 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px;">
+                                    @{
+                                        var ftColorG = doc.FileType?.ToLower() switch {
+                                            "pdf"  => "#d93856",
+                                            "docx" or "doc" => "#2b579a",
+                                            "pptx" or "ppt" => "#d04423",
+                                            _      => "#6b7280"
+                                        };
+                                    }
+                                    <span style="color: @ftColorG; font-weight:900; font-size: 12px;">[@doc.FileType?.ToUpper()]</span>
+                                    @doc.Title
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <a href="/ViewDocument?id=@doc.Id" style="font-weight: 800; font-size: 12px; color: var(--blue); white-space: nowrap;">
+                                        <i class="fa-solid fa-eye"></i> Xem
+                                    </a>
+                                    <a href="@doc.FileUrl" target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
+                                        <i class="fa-solid fa-download"></i> Tải
+                                    </a>
+                                    @if(Model.IsOwner)
+                                    {
+                                        <form method="post" asp-page-handler="DeleteDocument" asp-route-id="@Model.Subject.Id" asp-route-docId="@doc.Id"
+                                              onsubmit="return confirm('Xóa tài liệu?');" style="display:inline;">
+                                            <button type="submit" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: #dc2626; padding: 0;">
+                                                <i class="fa-solid fa-trash"></i> Xóa
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                            <div style="margin-top: 6px; font-size: 11px; color: #888; font-weight: 600; display: flex; gap: 15px;">
+                                <span><i class="fa-solid fa-user-clock"></i> Upload bởi: <strong>@(doc.UploaderName ?? "Không rõ")</strong></span>
+                                <span><i class="fa-solid fa-clock"></i> @ToVnTime(doc.UploadedAt) (GMT+7)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            @foreach (var chapter in Model.Subject.Chapters.OrderBy(c => c.OrderIndex))
+            {
+                <div style="background-color: var(--white); border: var(--border); box-shadow: 4px 4px 0px var(--black); padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                        <h2 style="font-weight: 900; font-size: 18px; color: var(--pink);">@chapter.Title</h2>
+
+                        @if(Model.IsOwner)
+                        {
+                            <button type="button" onclick="openChapterModal(@chapter.Id, '@chapter.Title')" class="brutal-btn" style="background-color: var(--white); color: var(--black); border: 2px solid var(--black); padding: 4px 10px; font-weight: 800; font-size: 12px; box-shadow: 2px 2px 0px var(--black);">
+                                <i class="fa-solid fa-pen"></i> SỬA TÊN CHƯƠNG
+                            </button>
+                        }
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        @foreach (var doc in chapter.Documents)
+                        {
+                            <div style="background-color: var(--bg); border: 2px solid var(--black); padding: 10px 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px;">
+                                        @{
+                                            var ftColor = doc.FileType?.ToLower() switch {
+                                                "pdf"  => "#d93856",
+                                                "docx" or "doc" => "#2b579a",
+                                                "pptx" or "ppt" => "#d04423",
+                                                _      => "#6b7280"
+                                            };
+                                        }
+                                        <span style="color: @ftColor; font-weight:900; font-size: 12px;">[@doc.FileType?.ToUpper()]</span>
+                                        @doc.Title
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <a href="/ViewDocument?id=@doc.Id" style="font-weight: 800; font-size: 12px; color: var(--blue); white-space: nowrap;">
+                                            <i class="fa-solid fa-eye"></i> Xem
+                                        </a>
+                                        <a href="@doc.FileUrl" target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
+                                            <i class="fa-solid fa-download"></i> Tải
+                                        </a>
+                                        @if(Model.IsOwner)
+                                        {
+                                            <form method="post" asp-page-handler="DeleteDocument" asp-route-id="@Model.Subject.Id" asp-route-docId="@doc.Id"
+                                                  onsubmit="return confirm('Xóa tài liệu \'@doc.Title\'? Hành động này không thể hoàn tác!');" style="display:inline;">
+                                                <button type="submit" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: #dc2626; padding: 0;">
+                                                    <i class="fa-solid fa-trash"></i> Xóa
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </div>
+                                <!-- Lịch sử upload -->
+                                <div style="margin-top: 6px; font-size: 11px; color: #888; font-weight: 600; display: flex; gap: 15px;">
+                                    <span><i class="fa-solid fa-user-clock"></i> Upload bởi: <strong>@(doc.UploaderName ?? "Không rõ")</strong></span>
+                                    <span><i class="fa-solid fa-clock"></i> @ToVnTime(doc.UploadedAt) (GMT+7)</span>
+                                </div>
+                            </div>
+                        }
+
+                        @if (!chapter.Documents.Any())
+                        {
+                            <div style="font-style: italic; color: #777; font-size: 13px; font-weight: 600;">Chưa có tài liệu nào trong chương này.</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (!Model.Subject.Chapters.Any())
+            {
+                <div style="padding: 40px; text-align: center; border: 3px dashed #000; background: #fff; font-weight: 800; font-style: italic;">
+                    Chưa có chương học nào.
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@if(Model.IsOwner)
+{
+    <!-- MODAL CHƯƠNG -->
+    <div id="chapterModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 400px; max-width: 90%;">
+            <h2 id="chapterModalTitle" style="font-weight: 900; color: var(--pink); margin-bottom: 20px; text-transform: uppercase;">THÊM CHƯƠNG MỚI</h2>
+
+            <form id="chapterForm" method="post" asp-page-handler="AddChapter" asp-route-id="@Model.Subject.Id">
+                <input type="hidden" id="updateChapterId" asp-for="UpdateChapterId" value="0" />
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Tên chương</label>
+                    <input type="text" id="chapterTitleInput" name="NewChapterTitle" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 16px;" placeholder="Ví dụ: Chương 1: Mở đầu" />
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeModals()" class="brutal-btn" style="background: #ccc; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">HỦY</button>
+                    <button type="submit" class="brutal-btn" style="background: var(--pink); color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">LƯU CHƯƠNG</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL UPLOAD -->
+    <div id="uploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 450px; max-width: 90%;">
+            <h2 style="font-weight: 900; color: var(--blue); margin-bottom: 20px; text-transform: uppercase;">TẢI LÊN TÀI LIỆU</h2>
+
+            <form method="post" asp-page-handler="UploadFile" asp-route-id="@Model.Subject.Id" enctype="multipart/form-data">
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Tên tài liệu</label>
+                    <input type="text" asp-for="UploadTitle" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px;" placeholder="Tên tài liệu hiển thị" />
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chương (Tùy chọn)</label>
+                    <select asp-for="UploadChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
+                        <option value="">-- Tài liệu chung (Không thuộc chương nào) --</option>
+                        @foreach(var c in Model.Subject.Chapters.OrderBy(x => x.OrderIndex))
+                        {
+                            <option value="@c.Id">@c.Title</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chọn File</label>
+                    <input type="file" asp-for="UploadFile" required accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; background: white; font-size: 14px;" />
+                    <p style="font-size: 11px; color: #888; margin-top: 5px; font-weight: 600;">Hỗ trợ: PDF, DOCX, PPTX, TXT, MD, CSV</p>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeModals()" class="brutal-btn" style="background: #ccc; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">HỦY</button>
+                    <button type="submit" class="brutal-btn" style="background: var(--blue); color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">TẢI LÊN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openChapterModal(id, title) {
+            document.getElementById('chapterModal').style.display = 'flex';
+            document.getElementById('updateChapterId').value = id;
+            if(id > 0) {
+                document.getElementById('chapterModalTitle').innerText = "CẬP NHẬT CHƯƠNG";
+                document.getElementById('chapterForm').action = "?handler=UpdateChapter";
+                document.getElementById('chapterTitleInput').name = "UpdateChapterTitle";
+                document.getElementById('chapterTitleInput').value = title;
+            } else {
+                document.getElementById('chapterModalTitle').innerText = "THÊM CHƯƠNG MỚI";
+                document.getElementById('chapterForm').action = "?handler=AddChapter";
+                document.getElementById('chapterTitleInput').name = "NewChapterTitle";
+                document.getElementById('chapterTitleInput').value = "";
+            }
+        }
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').style.display = 'flex';
+        }
+
+        function closeModals() {
+            document.getElementById('chapterModal').style.display = 'none';
+            document.getElementById('uploadModal').style.display = 'none';
+        }
+    </script>
+}
