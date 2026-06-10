@@ -83,6 +83,14 @@ Hệ thống được chia làm hai vai trò chính: **Giảng Viên** và **Sin
 4. **Đọc Tài liệu:**
    - Tại cột bên trái, bấm vào biểu tượng con mắt 👁 bên cạnh mỗi tài liệu để xem nội dung văn bản thuần mà AI đang "đọc hiểu".
 
+### 💳 Hướng dẫn Thanh toán / Nâng cấp gói cước (Dành cho môi trường Test)
+Để nâng cấp gói cước trên môi trường thử nghiệm (Sandbox) qua cổng thanh toán, vui lòng sử dụng thông tin thẻ test sau khi chuyển hướng đến trang thanh toán:
+- **Ngân hàng:** NCB
+- **Số thẻ:** `9704198526191432198`
+- **Tên chủ thẻ:** `NGUYEN VAN A`
+- **Ngày phát hành:** `07/15`
+- **Mật khẩu OTP:** `123456`
+
 ---
 
 ## 🐞 Gỡ Lỗi Thường Gặp (Troubleshooting)
