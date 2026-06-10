@@ -123,10 +123,13 @@ namespace BussinessLayer.Services
                     var similarChunks = await _documentRepository.SearchSimilarChunksAsync(
                         new Vector(questionEmbedding),
                         request.SelectedDocIds,
-                        topK: 5);
+                        topK: 20); // Top-K Retrieval: Tang so luong len 20
 
                     if (similarChunks.Any())
                     {
+                        // Thuc hien Re-ranking de chon ra 5 chunk tot nhat bang LLM
+                        similarChunks = await RerankChunksAsync(request.Message, similarChunks, topN: 5);
+
                         contextText = string.Join(
                             "\n\n",
                             similarChunks.Select((chunk, index) =>
@@ -417,6 +420,74 @@ namespace BussinessLayer.Services
 
             promptSections.Add($"Cau hoi hien tai: {message}");
             return string.Join("\n\n", promptSections);
+        }
+
+        private async Task<List<DocumentChunk>> RerankChunksAsync(string query, List<DocumentChunk> chunks, int topN)
+        {
+            if (chunks.Count <= topN)
+            {
+                return chunks;
+            }
+
+            var promptSections = new List<string>
+            {
+                "Ban la mot he thong cham diem muc do lien quan cua tai lieu. Nhiem vu cua ban la chon ra cac doan tai lieu phu hop nhat voi cau hoi.",
+                $"Cau hoi: {query}",
+                "Danh sach cac doan tai lieu:"
+            };
+
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                promptSections.Add($"[{i}] {chunks[i].Content}");
+            }
+
+            promptSections.Add($@"Vui long tra ve MANG JSON gom toi da {topN} chi so (index) cua cac doan tai lieu lien quan nhat den cau hoi, sap xep theo do muc do phu hop giam dan. 
+Vi du: [3, 0, 1, 5, 2]
+CHI TRA VE MANG JSON, KHONG GIAI THICH HOAC THEM BAT KY VAN BAN NAO KHAC.");
+
+            var prompt = string.Join("\n\n", promptSections);
+            
+            try
+            {
+                // Su dung gemini-1.5-flash cho nhiem vu re-rank de dam bao toc do
+                var reply = await _geminiService.GenerateAnswerAsync(prompt, "gemini-1.5-flash");
+                
+                // Thu trich xuat JSON array tu phan hoi
+                var jsonStart = reply.IndexOf('[');
+                var jsonEnd = reply.LastIndexOf(']');
+                if (jsonStart >= 0 && jsonEnd > jsonStart)
+                {
+                    var jsonStr = reply.Substring(jsonStart, jsonEnd - jsonStart + 1);
+                    var indices = JsonSerializer.Deserialize<List<int>>(jsonStr);
+                    if (indices != null && indices.Count > 0)
+                    {
+                        var reranked = new List<DocumentChunk>();
+                        var addedIndices = new HashSet<int>();
+                        foreach (var idx in indices)
+                        {
+                            if (idx >= 0 && idx < chunks.Count && !addedIndices.Contains(idx))
+                            {
+                                reranked.Add(chunks[idx]);
+                                addedIndices.Add(idx);
+                            }
+                        }
+                        
+                        // Neu thieu so luong thi bo sung tu ban dau
+                        if (reranked.Count < topN)
+                        {
+                            var remaining = chunks.Where((c, i) => !addedIndices.Contains(i)).Take(topN - reranked.Count);
+                            reranked.AddRange(remaining);
+                        }
+                        return reranked;
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback: neu loi thi tra ve topN ban dau
+            }
+
+            return chunks.Take(topN).ToList();
         }
     }
 }

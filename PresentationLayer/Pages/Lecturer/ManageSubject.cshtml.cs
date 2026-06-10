@@ -109,7 +109,12 @@ namespace PresentationLayer.Pages.Lecturer
                     uploaderId = uId;
                 }
 
-                await _documentService.AddDocumentAsync(UploadTitle, fileType, fileUrl, id, UploadChapterId, uploaderId, extractedContent);
+                var documentId = await _documentService.AddDocumentAsync(UploadTitle, fileType, fileUrl, id, UploadChapterId, uploaderId, extractedContent);
+                if (documentId > 0)
+                {
+                    // Tự động băm và nhúng ngay lập tức
+                    await _documentService.ProcessDocumentEmbeddingAsync(documentId);
+                }
             }
 
             return RedirectToPage(new { id = id });

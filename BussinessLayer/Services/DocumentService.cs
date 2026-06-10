@@ -123,12 +123,12 @@ namespace BussinessLayer.Services
             return doc?.Content ?? string.Empty;
         }
 
-        public async Task<bool> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId)
+        public async Task<int> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId)
         {
             return await AddDocumentAsync(title, fileType, fileUrl, subjectId, chapterId, uploaderId, null);
         }
 
-        public async Task<bool> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId, string? extractedContent)
+        public async Task<int> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId, string? extractedContent)
         {
             var document = new DataAccessLayer.Entities.Document
             {
@@ -143,7 +143,7 @@ namespace BussinessLayer.Services
                 Content = extractedContent ?? string.Empty
             };
             await _documentRepository.AddDocumentAsync(document);
-            return true;
+            return document.Id;
         }
 
         public async Task<bool> ProcessDocumentAsync(int documentId, string extractedContent)
