@@ -10,6 +10,7 @@ namespace BussinessLayer.DTOs
         public List<ChatMessageDto> History { get; set; } = new List<ChatMessageDto>();
         public List<int> SelectedDocIds { get; set; } = new List<int>();
         public bool RestrictToDocs { get; set; } = true;
+        public string? ModelName { get; set; }
     }
 
     public class ChatMessageDto

@@ -189,7 +189,7 @@ namespace BussinessLayer.Services
                 }
 
                 var prompt = BuildPrompt(request.Message, conversationHistory, contextText, request.RestrictToDocs);
-                var replyText = await _geminiService.GenerateAnswerAsync(prompt);
+                var replyText = await _geminiService.GenerateAnswerAsync(prompt, request.ModelName);
 
                 if (string.IsNullOrWhiteSpace(replyText))
                 {
@@ -397,12 +397,22 @@ namespace BussinessLayer.Services
                     "\n\nHay giu dung ngu canh hoi thoai khi tra loi cau hoi moi.");
             }
 
-            if (restrictToDocs && !string.IsNullOrWhiteSpace(contextText))
+            if (!string.IsNullOrWhiteSpace(contextText))
             {
-                promptSections.Add(
-                    "Tai lieu lien quan:\n" +
-                    contextText +
-                    "\n\nChi su dung thong tin trong tai lieu tren de tra loi. Neu tai lieu khong du thong tin, hay noi ro rang.");
+                if (restrictToDocs)
+                {
+                    promptSections.Add(
+                        "Tai lieu lien quan:\n" +
+                        contextText +
+                        "\n\nChi su dung thong tin trong tai lieu tren de tra loi. Neu tai lieu khong du thong tin, hay noi ro rang.");
+                }
+                else
+                {
+                    promptSections.Add(
+                        "Tai lieu lien quan (co the tham khao):\n" +
+                        contextText +
+                        "\n\nHay uu tien su dung thong tin trong tai lieu nay. Neu tai lieu khong du thong tin, ban co the su dung kien thuc san co cua ban de tra loi.");
+                }
             }
 
             promptSections.Add($"Cau hoi hien tai: {message}");

@@ -10,16 +10,19 @@ namespace PresentationLayer.Pages.Admin
         private readonly IUserService _userService;
         private readonly ISubjectService _subjectService;
         private readonly IDocumentService _documentService;
+        private readonly ISubscriptionService _subscriptionService;
 
         public int TotalUsers { get; set; }
         public int TotalSubjects { get; set; }
         public int TotalDocuments { get; set; }
+        public decimal EstimatedRevenue { get; set; }
 
-        public DashboardModel(IUserService userService, ISubjectService subjectService, IDocumentService documentService)
+        public DashboardModel(IUserService userService, ISubjectService subjectService, IDocumentService documentService, ISubscriptionService subscriptionService)
         {
             _userService = userService;
             _subjectService = subjectService;
             _documentService = documentService;
+            _subscriptionService = subscriptionService;
         }
 
         public async Task OnGetAsync()
@@ -32,6 +35,15 @@ namespace PresentationLayer.Pages.Admin
 
             var documents = await _documentService.GetAllDocumentsAsync();
             TotalDocuments = documents.Count();
+
+            var subscriptions = await _subscriptionService.GetAllSubscriptionsAsync();
+            decimal revenue = 0;
+            foreach(var sub in subscriptions.Where(s => s.IsActive))
+            {
+                if(sub.SubscriptionPlan == "Basic") revenue += 50000;
+                else if(sub.SubscriptionPlan == "Premium") revenue += 100000;
+            }
+            EstimatedRevenue = revenue;
         }
     }
 }

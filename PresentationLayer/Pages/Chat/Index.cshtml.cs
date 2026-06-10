@@ -16,11 +16,13 @@ namespace PresentationLayer.Pages.Chat
     {
         private readonly IDocumentService _documentService;
         private readonly IChatService _chatService;
+        private readonly IGeminiService _geminiService;
 
-        public IndexModel(IDocumentService documentService, IChatService chatService)
+        public IndexModel(IDocumentService documentService, IChatService chatService, IGeminiService geminiService)
         {
             _documentService = documentService;
             _chatService = chatService;
+            _geminiService = geminiService;
         }
 
         public List<DocumentDto> Documents { get; set; } = new List<DocumentDto>();
@@ -38,6 +40,12 @@ namespace PresentationLayer.Pages.Chat
             var userId = GetUserId();
             var sessions = await _chatService.GetUserSessionsAsync(userId);
             return new JsonResult(new { success = true, sessions });
+        }
+
+        public async Task<IActionResult> OnGetModelsAsync()
+        {
+            var models = await _geminiService.GetAvailableModelsAsync();
+            return new JsonResult(new { success = true, models });
         }
 
         public async Task<IActionResult> OnPostCreateSessionAsync()

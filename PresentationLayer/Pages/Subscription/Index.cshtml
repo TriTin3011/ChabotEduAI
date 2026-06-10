@@ -169,7 +169,7 @@
                     <form method="post" asp-page-handler="Upgrade">
                         <input type="hidden" name="plan" value="Basic" />
                         <button type="submit" class="upgrade-btn" style="background:var(--blue); color:var(--white);"
-                                onclick="return confirm('Xác nhận nâng cấp gói Basic (50.000đ/tháng)?\n(Demo — chưa tích hợp thanh toán thực)')">
+                                onclick="return confirm('Xác nhận thanh toán gói Basic (50.000đ/tháng)?')">
                             <i class="fa-solid fa-arrow-up"></i> NÂNG CẤP BASIC
                         </button>
                     </form>
@@ -200,7 +200,7 @@
                     <form method="post" asp-page-handler="Upgrade">
                         <input type="hidden" name="plan" value="Premium" />
                         <button type="submit" class="upgrade-btn" style="background:var(--yellow); color:var(--black);"
-                                onclick="return confirm('Xác nhận nâng cấp gói Premium (150.000đ/tháng)?\n(Demo — chưa tích hợp thanh toán thực)')">
+                                onclick="return confirm('Xác nhận thanh toán gói Premium (150.000đ/tháng)?')">
                             <i class="fa-solid fa-crown"></i> NÂNG CẤP PREMIUM
                         </button>
                     </form>
@@ -213,8 +213,7 @@
     <!-- ── GHI CHÚ ── -->
     <div style="background:var(--white); border:2px dashed var(--black); padding:16px 20px; font-size:13px; font-weight:700; color:#555;">
         <i class="fa-solid fa-triangle-exclamation" style="color:var(--yellow);"></i>
-        <strong>Lưu ý:</strong> Hệ thống đang ở chế độ <strong>Demo</strong>. Nhấn nâng cấp sẽ kích hoạt gói ngay mà không cần thanh toán thực.
-        Lượt hỏi được <strong>reset vào đầu mỗi tháng</strong>.
+        <strong>Lưu ý:</strong> Lượt hỏi được <strong>reset vào đầu mỗi tháng</strong>.
     </div>
 
 </div>

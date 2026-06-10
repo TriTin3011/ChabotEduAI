@@ -133,5 +133,74 @@ namespace BussinessLayer.Services
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }
+        public async Task SendBroadcastEmailAsync(System.Collections.Generic.IEnumerable<string> toEmails, string subject, string content)
+        {
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_smtpHost, _smtpPort, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(_smtpUser, _smtpPass);
+
+            foreach (var email in toEmails)
+            {
+                if (string.IsNullOrWhiteSpace(email)) continue;
+
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_fromName, _smtpUser));
+                message.To.Add(MailboxAddress.Parse(email));
+                message.Subject = $"[EduManager] {subject}";
+
+                message.Body = new TextPart("html")
+                {
+                    Text = $"""
+                    <!DOCTYPE html>
+                    <html lang="vi">
+                    <head><meta charset="UTF-8"></head>
+                    <body style="font-family: 'Segoe UI', Arial, sans-serif; background:#f8f8f8; margin:0; padding:0;">
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f8f8; padding: 30px 0;">
+                        <tr><td align="center">
+                          <table width="500" cellpadding="0" cellspacing="0"
+                                 style="background:#fff; border:3px solid #000; box-shadow: 6px 6px 0px #000;">
+                            <!-- Header -->
+                            <tr>
+                              <td style="background:#2b6cb0; padding:25px 30px; border-bottom:3px solid #000;">
+                                <h1 style="margin:0; color:#fff; font-size:22px; font-weight:900; letter-spacing:1px;">
+                                  📢 THÔNG BÁO TỪ HỆ THỐNG
+                                </h1>
+                              </td>
+                            </tr>
+                            <!-- Body -->
+                            <tr>
+                              <td style="padding:30px; color:#333; font-size:15px; line-height:1.6;">
+                                {content.Replace("\n", "<br/>")}
+                              </td>
+                            </tr>
+                            <!-- Footer -->
+                            <tr>
+                              <td style="padding:15px 30px; border-top:3px solid #000;
+                                         background:#f8f8f8; text-align:center;">
+                                <p style="margin:0; font-size:12px; color:#888; font-weight:600;">
+                                  © EduManager — Hệ thống quản lý học tập.
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td></tr>
+                      </table>
+                    </body>
+                    </html>
+                    """
+                };
+
+                try
+                {
+                    await client.SendAsync(message);
+                }
+                catch (Exception)
+                {
+                    // Log error if needed, but continue with next email
+                }
+            }
+
+            await client.DisconnectAsync(true);
+        }
     }
 }

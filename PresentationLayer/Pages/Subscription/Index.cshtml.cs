@@ -28,14 +28,14 @@ namespace PresentationLayer.Pages.Subscription
                 Info = await _subscriptionService.GetSubscriptionInfoAsync(userId);
         }
 
-        public async Task<IActionResult> OnPostUpgradeAsync(string plan)
+        public IActionResult OnPostUpgrade(string plan)
         {
             var userId = GetUserId();
-            if (userId > 0)
-                await _subscriptionService.UpgradePlanAsync(userId, plan);
+            if (userId <= 0)
+                return RedirectToPage("/Auth/Login");
 
-            TempData["SuccessMessage"] = $"Nâng cấp gói {plan} thành công! (Demo — chưa tích hợp thanh toán)";
-            return RedirectToPage();
+            // Redirect to the Payment Create page which will forward to VNPay
+            return RedirectToPage("/Payment/Create", new { plan = plan });
         }
 
         private int GetUserId()

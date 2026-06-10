@@ -478,18 +478,15 @@
 
     <!-- SCRIPT -->
     <script>
-        // Setup toggle restrict state
+        // ========== TOGGLE RESTRICT ==========
         let restrictToDocs = true;
-        const toggleButtons = document.querySelectorAll('.toggle-btn');
-        toggleButtons.forEach(btn => {
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
-                toggleButtons.forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                
-                const text = this.textContent.trim();
                 const hint = document.querySelector('.restriction-hint');
-                if (text === 'Trong phạm vi tài liệu') {
+                if (this.textContent.trim() === 'Trong phạm vi tài liệu') {
                     restrictToDocs = true;
                     hint.textContent = 'Hạn chế: Chỉ trả lời ĐÚNG phạm vi tài liệu.';
                 } else {
@@ -499,668 +496,285 @@
             });
         });
 
-        // --- QUẢN LÝ LỊCH SỬ CHAT THEO PHIÊN (LOCALSTORAGE SESSIONS) ---
-        let sessions = [];
-        let currentSessionId = "";
-        const chatMessages = document.getElementById('chatMessages');
-
-        // Lưu danh sách phiên vào localStorage
-        function saveSessions() {
-            localStorage.setItem('edu_chat_sessions', JSON.stringify(sessions));
-            localStorage.setItem('edu_current_session_id', currentSessionId);
-        }
-
-        // Khởi tạo các phiên hội thoại khi load trang
-        function initSessions() {
-            const savedSessions = localStorage.getItem('edu_chat_sessions');
-            const savedCurrentId = localStorage.getItem('edu_current_session_id');
-
-            if (savedSessions) {
-                try {
-                    sessions = JSON.parse(savedSessions);
-                } catch (e) {
-                    console.error('Lỗi nạp danh sách phiên chat:', e);
-                    sessions = [];
+        // ========== LOAD MODELS ==========
+        async function loadModels() {
+            try {
+                const res = await fetch('?handler=Models');
+                const data = await res.json();
+                const sel = document.getElementById('modelSelector');
+                if (data.success && data.models && data.models.length > 0) {
+                    sel.innerHTML = '';
+                    data.models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.displayName;
+                        if (m.id === 'gemini-3.5-flash') opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                } else {
+                    sel.innerHTML = '<option value="gemini-3.5-flash">Gemini 3.5 Flash</option>';
                 }
+            } catch(e) {
+                const sel = document.getElementById('modelSelector');
+                if (sel) sel.innerHTML = '<option value="gemini-3.5-flash">Gemini 3.5 Flash</option>';
             }
+        }
+        loadModels();
 
-            if (savedCurrentId) {
-                currentSessionId = savedCurrentId;
-            }
+        // ========== CHAT CORE ==========
+        const chatMessages = document.getElementById('chatMessages');
+        let sessions = [], currentSessionId = null;
 
-            // Nếu chưa có phiên nào, tự động tạo phiên mặc định
-            if (sessions.length === 0) {
-                const defaultId = Date.now().toString();
-                sessions = [{
-                    id: defaultId,
-                    title: "Cuộc trò chuyện mới",
-                    messages: []
-                }];
-                currentSessionId = defaultId;
-                saveSessions();
-            } else if (!sessions.some(s => s.id === currentSessionId)) {
-                // Đảm bảo currentSessionId hợp lệ
-                currentSessionId = sessions[0].id;
-            }
-
-            renderSessionsList();
-            renderActiveSessionMessages();
+        function escapeHtml(t) {
+            return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+        }
+        function formatMarkdown(text) {
+            if (!text) return '';
+            let h = escapeHtml(text);
+            h = h.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+            h = h.replace(/\*(.*?)\*/g,'<em>$1</em>');
+            h = h.replace(/`(.*?)`/g,'<code style="background:#f3f4f6;padding:2px 4px;font-family:monospace;font-size:90%;color:#c7254e;">$1</code>');
+            h = h.replace(/```([\s\S]*?)```/g,'<pre style="background:#f8f9fa;padding:12px;border:2px solid #000;font-family:monospace;overflow-x:auto;margin:10px 0;white-space:pre-wrap;">$1</pre>');
+            h = h.replace(/^### (.*?)$/gm,'<h3 style="margin:8px 0;font-weight:800;">$1</h3>');
+            h = h.replace(/^## (.*?)$/gm,'<h2 style="margin:10px 0;font-weight:800;">$1</h2>');
+            h = h.replace(/^# (.*?)$/gm,'<h1 style="margin:12px 0;font-weight:900;">$1</h1>');
+            h = h.replace(/^\s*[-*]\s+(.*?)$/gm,'<li>$1</li>');
+            h = h.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>');
+            h = h.replace(/<\/ul>\s*<ul>/g,'');
+            h = h.replace(/\n/g,'<br>');
+            return h;
+        }
+        function buildCitationHtml(citations) {
+            if (!Array.isArray(citations) || citations.length === 0) return '';
+            const items = citations.map(c => {
+                const title = escapeHtml(c.documentTitle||'Tài liệu');
+                const chapter = c.chapterTitle ? `<span style="color:#555;">${escapeHtml(c.chapterTitle)}</span>` : '';
+                const snippet = c.snippet ? `<div style="font-size:11px;color:#444;">${escapeHtml(c.snippet)}</div>` : '';
+                const chunk = c.chunkOrderIndex > 0 ? `Đoạn ${c.chunkOrderIndex}` : 'Tóm tắt';
+                return `<div style="border:2px solid #000;box-shadow:2px 2px 0 #000;background:#fff8dc;padding:8px 10px;margin-top:4px;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:900;border:1px solid #000;background:#facc15;padding:2px 6px;">NGUỒN</span><span style="font-size:11px;font-weight:800;">${title}</span><span style="font-size:10px;color:#555;">${chunk}</span></div>${chapter}${snippet}</div>`;
+            }).join('');
+            return `<div style="margin-top:10px;border-top:1px dashed #ddd;padding-top:8px;"><div style="font-size:11px;font-weight:900;color:#8b3d3d;text-transform:uppercase;margin-bottom:6px;">Nguồn tham khảo</div>${items}</div>`;
         }
 
-        // Hiển thị danh sách phiên ở cột giữa
-        function renderSessionsList() {
-            const container = document.getElementById('sessionsListBox');
-            if (!container) return;
-            container.innerHTML = '';
-
-            sessions.forEach(session => {
-                const isActive = session.id === currentSessionId;
-                
-                const item = document.createElement('div');
-                item.className = isActive ? 'session-item active' : 'session-item';
-                item.style.display = 'flex';
-                item.style.alignItems = 'center';
-                item.style.justifyContent = 'space-between';
-                item.style.padding = '8px 10px';
-                item.style.border = '2px solid #000';
-                item.style.boxShadow = isActive ? '2px 2px 0px #000' : 'none';
-                item.style.fontSize = '12px';
-                item.style.fontWeight = '800';
-                item.style.cursor = 'pointer';
-                item.style.backgroundColor = 'var(--white)';
-                item.style.borderRadius = '0px';
-                
-                item.onclick = (e) => {
-                    // Tránh click nhầm vào nút xóa
-                    if (e.target.classList.contains('fa-trash-can') || e.target.closest('.delete-session-btn')) {
-                        return;
-                    }
-                    selectSession(session.id);
-                };
-
-                const titleSpan = document.createElement('span');
-                titleSpan.style.overflow = 'hidden';
-                titleSpan.style.textOverflow = 'ellipsis';
-                titleSpan.style.whiteSpace = 'nowrap';
-                titleSpan.style.flex = '1';
-                titleSpan.style.marginRight = '8px';
-                titleSpan.textContent = session.title;
-
-                const trashBtn = document.createElement('button');
-                trashBtn.className = 'delete-session-btn';
-                trashBtn.style.background = 'none';
-                trashBtn.style.border = 'none';
-                trashBtn.style.cursor = 'pointer';
-                trashBtn.style.padding = '2px 4px';
-                trashBtn.style.color = '#555';
-                trashBtn.style.display = 'flex';
-                trashBtn.style.alignItems = 'center';
-                trashBtn.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>';
-                
-                trashBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    deleteSession(session.id);
-                };
-
-                item.appendChild(titleSpan);
-                item.appendChild(trashBtn);
-                container.appendChild(item);
-            });
-        }
-
-        // Hiển thị toàn bộ tin nhắn của phiên hiện tại
-        function renderActiveSessionMessages() {
-            const activeSession = sessions.find(s => s.id === currentSessionId);
-            chatMessages.innerHTML = '';
-
-            if (activeSession && activeSession.messages.length > 0) {
-                activeSession.messages.forEach(msg => {
-                    renderMessageUI(msg.role, msg.text);
-                });
-            } else {
-                // Hiển thị tin nhắn chào mặc định nếu phiên rỗng
-                chatMessages.innerHTML = `
-                    <div class="message message-bot">
-                        <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
-                        <div class="message-content">
-                            <div class="message-sender">Trợ lý AI</div>
-                            <p class="message-text">Chào bạn! Tôi là trợ lý học tập AI của bạn. Hãy chọn tài liệu ôn tập ở cột bên trái và gửi câu hỏi để bắt đầu trò chuyện nhé!</p>
-                        </div>
-                    </div>
-                `;
-            }
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Hàm render giao diện tin nhắn thô lên màn hình
-        function renderMessageUI(role, text) {
+        function renderMessageUI(role, text, citations) {
             const div = document.createElement('div');
             const isUser = role === 'user';
             div.className = isUser ? 'message message-user' : 'message message-bot';
-            
-            const avatarIcon = isUser ? 'fa-user' : 'fa-robot';
             const senderName = isUser ? '@User.Identity?.Name' : 'Trợ lý AI';
-            const msgContent = isUser ? `<p class="message-text">${escapeHtml(text)}</p>` : 
-                                       `<div class="message-text" style="font-weight: 500; font-size: 14px; line-height: 1.6;">${formatMarkdown(text)}</div>`;
-
-            div.innerHTML = `
-                <div class="chat-avatar"><i class="fa-solid ${avatarIcon}"></i></div>
-                <div class="message-content">
-                    <div class="message-sender">${senderName}</div>
-                    ${msgContent}
-                </div>
-            `;
+            const icon = isUser ? 'fa-user' : 'fa-robot';
+            const body = isUser
+                ? `<p class="message-text">${escapeHtml(text)}</p>`
+                : `<div class="message-text" style="font-weight:500;font-size:14px;line-height:1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations||[])}`;
+            div.innerHTML = `<div class="chat-avatar"><i class="fa-solid ${icon}"></i></div><div class="message-content"><div class="message-sender">${senderName}</div>${body}</div>`;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Tạo cuộc hội thoại mới
-        function createNewSession() {
-            const newId = Date.now().toString();
-            sessions.push({
-                id: newId,
-                title: "Cuộc trò chuyện mới",
-                messages: []
-            });
-            currentSessionId = newId;
-            saveSessions();
-            renderSessionsList();
-            renderActiveSessionMessages();
-        }
-
-        // Chọn một cuộc hội thoại khác
-        function selectSession(id) {
-            currentSessionId = id;
-            saveSessions();
-            renderSessionsList();
-            renderActiveSessionMessages();
-        }
-
-        // Xóa một cuộc hội thoại cụ thể
-        function deleteSession(id) {
-            if (sessions.length <= 1) {
-                alert('Hệ thống yêu cầu giữ lại ít nhất một cuộc hội thoại.');
-                return;
-            }
-            if (confirm('Bạn có chắc chắn muốn xóa cuộc hội thoại này không?')) {
-                sessions = sessions.filter(s => s.id !== id);
-                if (currentSessionId === id) {
-                    currentSessionId = sessions[0].id;
-                }
-                saveSessions();
-                renderSessionsList();
-                renderActiveSessionMessages();
-            }
-        }
-
-        // Xóa toàn bộ nội dung tin nhắn trong cuộc hội thoại hiện tại
-        function clearChatHistory() {
-            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ tin nhắn trong cuộc hội thoại này?')) {
-                const activeSession = sessions.find(s => s.id === currentSessionId);
-                if (activeSession) {
-                    activeSession.messages = [];
-                    activeSession.title = "Cuộc trò chuyện mới";
-                    saveSessions();
-                    renderSessionsList();
-                    renderActiveSessionMessages();
-                }
-            }
-        }
-
-        // Nạp và hiển thị lịch sử ngay lập tức
-        initSessions();
-
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (text === '') return;
-
-            const activeSession = sessions.find(s => s.id === currentSessionId);
-            if (!activeSession) return;
-
-            // 1. Hiển thị tin nhắn người dùng lên giao diện
-            renderMessageUI('user', text);
-            
-            // Sao chép lịch sử hội thoại trước khi thêm tin nhắn mới để gửi lên server
-            const historyToSend = [...activeSession.messages];
-            
-            // Cập nhật tên cuộc trò chuyện theo câu hỏi đầu tiên
-            if (activeSession.messages.length === 0) {
-                activeSession.title = text.length > 22 ? text.substring(0, 22) + "..." : text;
-                renderSessionsList();
-            }
-
-            // Lưu tin nhắn mới của user vào bộ nhớ đệm
-            activeSession.messages.push({ role: 'user', text: text });
-            saveSessions();
-
-            input.value = '';
-
-            // 2. Thu thập danh sách các documentId được chọn
-            const selectedDocIds = [];
-            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                selectedDocIds.push(parseInt(cb.value));
-            });
-
-            // Hiển thị hiệu ứng AI đang suy nghĩ
-            showTypingIndicator();
-
-            const requestData = {
-                message: text,
-                history: historyToSend,
-                selectedDocIds: selectedDocIds,
-                restrictToDocs: restrictToDocs
-            };
-
-            // Gửi AJAX Request lên server
-            fetch('?handler=SendChatMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                removeTypingIndicator();
-
-                if (data.success === false) {
-                    // Nếu lỗi hệ thống, hoàn tác tin nhắn của user để đồng bộ
-                    activeSession.messages.pop();
-                    if (activeSession.messages.length === 0) {
-                        activeSession.title = "Cuộc trò chuyện mới";
-                        renderSessionsList();
-                    }
-                    saveSessions();
-                    renderActiveSessionMessages();
-
-                    // Hiển thị thông báo lỗi từ hệ thống
-                    const errDiv = document.createElement('div');
-                    errDiv.className = 'message message-bot';
-                    errDiv.innerHTML = `
-                        <div class="chat-avatar" style="background-color: #d93856;"><i class="fa-solid fa-robot"></i></div>
-                        <div class="message-content" style="border-color: #d93856;">
-                            <div class="message-sender" style="color: #d93856;">Hệ thống</div>
-                            <p class="message-text">⚠️ ${data.message} ${data.outOfQuota ? '<a href="/Subscription" style="color: #3b82f6; text-decoration: underline;">Nâng cấp gói ngay</a>' : ''}</p>
-                        </div>
-                    `;
-                    chatMessages.appendChild(errDiv);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    return; 
-                }
-
-                // 3. Hiển thị câu trả lời từ AI lên giao diện và lưu
-                renderMessageUI('model', data.reply);
-                
-                activeSession.messages.push({ role: 'model', text: data.reply });
-                saveSessions();
-
-                // Hiển thị số lượt hỏi còn lại dưới chân tin nhắn mới nhất
-                const latestMsgContent = chatMessages.lastChild.querySelector('.message-content');
-                const quotaSpan = document.createElement('span');
-                quotaSpan.style.cssText = "font-size: 10px; color: #777; font-weight: bold; display: block; margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 6px;";
-                quotaSpan.textContent = `(Còn ${data.remaining >= 9999 ? '∞' : data.remaining} lượt hỏi hôm nay)`;
-                latestMsgContent.appendChild(quotaSpan);
-            })
-            .catch(error => {
-                removeTypingIndicator();
-                console.error('Error:', error);
-                
-                // Hoàn tác tin nhắn của user nếu lỗi mạng
-                activeSession.messages.pop();
-                if (activeSession.messages.length === 0) {
-                    activeSession.title = "Cuộc trò chuyện mới";
-                    renderSessionsList();
-                }
-                saveSessions();
-                renderActiveSessionMessages();
-
-                const errDiv = document.createElement('div');
-                errDiv.className = 'message message-bot';
-                errDiv.innerHTML = `
-                    <div class="chat-avatar" style="background-color: #d93856;"><i class="fa-solid fa-robot"></i></div>
-                    <div class="message-content" style="border-color: #d93856;">
-                        <div class="message-sender" style="color: #d93856;">Lỗi mạng</div>
-                        <p class="message-text">⚠️ Không thể kết nối với máy chủ. Vui lòng thử lại sau.</p>
-                    </div>
-                `;
-                chatMessages.appendChild(errDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-        }
-
         function showTypingIndicator() {
-            const chatMessages = document.getElementById('chatMessages');
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'message message-bot typing-indicator-msg';
-            typingDiv.innerHTML = `
-                <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
-                <div class="message-content" style="background-color: #f7f7f9;">
-                    <div class="message-sender">Trợ lý AI</div>
-                    <p class="message-text"><i class="fa-solid fa-circle-notch fa-spin"></i> Trợ lý AI đang suy nghĩ và phân tích tài liệu...</p>
-                </div>
-            `;
-            chatMessages.appendChild(typingDiv);
+            const d = document.createElement('div');
+            d.className = 'message message-bot typing-indicator-msg';
+            d.innerHTML = `<div class="chat-avatar"><i class="fa-solid fa-robot"></i></div><div class="message-content" style="background:#f7f7f9;"><div class="message-sender">Trợ lý AI</div><p class="message-text"><i class="fa-solid fa-circle-notch fa-spin"></i> Trợ lý AI đang suy nghĩ...</p></div>`;
+            chatMessages.appendChild(d);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
         function removeTypingIndicator() {
-            const indicators = document.querySelectorAll('.typing-indicator-msg');
-            indicators.forEach(el => el.remove());
+            document.querySelectorAll('.typing-indicator-msg').forEach(el => el.remove());
+        }
+        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+        // ========== SESSION MANAGEMENT (SERVER-SIDE) ==========
+        function normalizeSession(s) {
+            return {
+                id: s.id,
+                title: s.title || 'Cuộc trò chuyện mới',
+                messages: (s.messages||[]).map(m => ({role:m.role, text:m.text, citations:m.citations||[]}))
+            };
+        }
+        function renderSessionsList() {
+            const box = document.getElementById('sessionsListBox');
+            if (!box) return;
+            box.innerHTML = '';
+            sessions.forEach(s => {
+                const isActive = s.id === currentSessionId;
+                const item = document.createElement('div');
+                item.className = 'session-item' + (isActive ? ' active' : '');
+                item.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:2px solid #000;box-shadow:${isActive?'2px 2px 0 #000':'none'};font-size:12px;font-weight:800;cursor:pointer;background:var(--white);margin-bottom:4px;`;
+                item.onclick = e => {
+                    if (e.target.closest('.del-btn')) return;
+                    switchSession(s.id);
+                };
+                const title = document.createElement('span');
+                title.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px;';
+                title.textContent = s.title;
+                const del = document.createElement('button');
+                del.className = 'del-btn';
+                del.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;color:#555;';
+                del.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:11px;"></i>';
+                del.onclick = e => { e.stopPropagation(); deleteSession(s.id); };
+                item.appendChild(title); item.appendChild(del);
+                box.appendChild(item);
+            });
+        }
+        function renderMessages() {
+            const s = sessions.find(x => x.id === currentSessionId);
+            chatMessages.innerHTML = '';
+            if (s && s.messages.length > 0) {
+                s.messages.forEach(m => renderMessageUI(m.role, m.text, m.citations));
+            } else {
+                chatMessages.innerHTML = `<div class="message message-bot"><div class="chat-avatar"><i class="fa-solid fa-robot"></i></div><div class="message-content"><div class="message-sender">Trợ lý AI</div><p class="message-text">Chào bạn! Hãy chọn tài liệu và gửi câu hỏi để bắt đầu!</p></div></div>`;
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        function switchSession(id) {
+            currentSessionId = id;
+            renderSessionsList();
+            renderMessages();
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
+        async function apiPost(url, payload) {
+            const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload||{}) });
+            return r.json();
+        }
+        async function initSessions() {
+            try {
+                const r = await fetch('?handler=Sessions');
+                const data = await r.json();
+                if (!data.success) throw new Error();
+                sessions = (data.sessions||[]).map(normalizeSession);
+                if (sessions.length === 0) { await createNewSession(); return; }
+                currentSessionId = sessions[0].id;
+                renderSessionsList(); renderMessages();
+            } catch(e) {
+                document.getElementById('sessionsListBox').innerHTML = '<div style="font-size:11px;color:#d93856;padding:10px;">Không thể tải lịch sử.</div>';
+                renderMessages();
+            }
+        }
+        async function createNewSession() {
+            const data = await apiPost('?handler=CreateSession', {});
+            if (!data.success || !data.session) return;
+            const s = normalizeSession(data.session);
+            sessions.unshift(s);
+            currentSessionId = s.id;
+            renderSessionsList(); renderMessages();
+        }
+        async function deleteSession(id) {
+            if (sessions.length <= 1) { alert('Cần giữ ít nhất một cuộc hội thoại.'); return; }
+            if (!confirm('Xóa cuộc hội thoại này?')) return;
+            await apiPost('?handler=DeleteSession', { sessionId: id });
+            sessions = sessions.filter(s => s.id !== id);
+            if (currentSessionId === id) currentSessionId = sessions[0]?.id || null;
+            renderSessionsList(); renderMessages();
+        }
+        async function clearChatHistory() {
+            if (!confirm('Xóa toàn bộ tin nhắn trong cuộc hội thoại này?')) return;
+            await apiPost('?handler=ClearSession', { sessionId: currentSessionId });
+            const s = sessions.find(x => x.id === currentSessionId);
+            if (s) { s.messages = []; s.title = 'Cuộc trò chuyện mới'; }
+            renderSessionsList(); renderMessages();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !currentSessionId) return;
+            const s = sessions.find(x => x.id === currentSessionId);
+            if (!s) return;
+
+            renderMessageUI('user', text, []);
+            const history = s.messages.map(m => ({role:m.role, text:m.text}));
+            s.messages.push({role:'user', text, citations:[]});
+            input.value = '';
+
+            const docIds = [];
+            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => docIds.push(parseInt(cb.value)));
+            showTypingIndicator();
+
+            try {
+                const resp = await fetch('?handler=SendChatMessage', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        message: text,
+                        sessionId: currentSessionId,
+                        history,
+                        selectedDocIds: docIds,
+                        restrictToDocs,
+                        modelName: document.getElementById('modelSelector')?.value || ''
+                    })
+                });
+                const data = await resp.json();
+                removeTypingIndicator();
+
+                if (!data.success) {
+                    s.messages.pop();
+                    renderMessages();
+                    const err = document.createElement('div');
+                    err.className = 'message message-bot';
+                    err.innerHTML = `<div class="chat-avatar" style="background:#d93856;"><i class="fa-solid fa-robot"></i></div><div class="message-content" style="border-color:#d93856;"><div class="message-sender" style="color:#d93856;">Hệ thống</div><p class="message-text">⚠️ ${escapeHtml(data.message||'Lỗi')} ${data.outOfQuota?'<a href="/Subscription" style="color:#3b82f6;text-decoration:underline;">Nâng cấp gói</a>':''}</p></div>`;
+                    chatMessages.appendChild(err);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    return;
+                }
+
+                const citations = data.citations || [];
+                renderMessageUI('model', data.reply, citations);
+                s.messages.push({role:'model', text:data.reply, citations});
+
+                if (data.sessionTitle) s.title = data.sessionTitle;
+                if (data.sessionId) currentSessionId = data.sessionId;
+                renderSessionsList();
+
+                const last = chatMessages.lastChild?.querySelector('.message-content');
+                if (last) {
+                    const q = document.createElement('span');
+                    q.style.cssText = 'font-size:10px;color:#777;font-weight:bold;display:block;margin-top:8px;border-top:1px dashed #ddd;padding-top:6px;';
+                    q.textContent = `(Còn ${data.remaining >= 9999 ? '∞' : data.remaining} lượt hỏi)`;
+                    last.appendChild(q);
+                }
+            } catch(err) {
+                removeTypingIndicator();
+                s.messages.pop();
+                renderMessages();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'message message-bot';
+                errDiv.innerHTML = `<div class="chat-avatar" style="background:#d93856;"><i class="fa-solid fa-robot"></i></div><div class="message-content" style="border-color:#d93856;"><div class="message-sender" style="color:#d93856;">Lỗi mạng</div><p class="message-text">⚠️ Không thể kết nối máy chủ.</p></div>`;
+                chatMessages.appendChild(errDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         }
 
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        function formatMarkdown(text) {
-            if (!text) return '';
-            
-            // Encode HTML characters first for safety
-            let html = escapeHtml(text);
-
-            // Bold
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            // Italic
-            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            // Inline code
-            html = html.replace(/`(.*?)`/g, '<code style="background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 90%; color: #c7254e;">$1</code>');
-            // Code block
-            html = html.replace(/```([\s\S]*?)```/g, '<pre style="background-color: #f8f9fa; padding: 12px; border: 2px solid #000; box-shadow: 2px 2px 0px #000; font-family: monospace; overflow-x: auto; margin: 10px 0; white-space: pre-wrap; font-size: 13px;">$1</pre>');
-            // Headers
-            html = html.replace(/^### (.*?)$/gm, '<h3 style="margin-top: 12px; margin-bottom: 6px; font-weight: 800;">$1</h3>');
-            html = html.replace(/^## (.*?)$/gm, '<h2 style="margin-top: 18px; margin-bottom: 8px; font-weight: 800;">$1</h2>');
-            html = html.replace(/^# (.*?)$/gm, '<h1 style="margin-top: 24px; margin-bottom: 10px; font-weight: 900;">$1</h1>');
-            
-            // Bullet list
-            html = html.replace(/^\s*-\s+(.*?)$/gm, '<li>$1</li>');
-            html = html.replace(/^\s*\*\s+(.*?)$/gm, '<li>$1</li>');
-            
-            // Wrap loose list items in <ul>
-            html = html.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
-            html = html.replace(/<\/ul>\s*<ul>/g, ''); // merge adjacent <ul>
-
-            // Line breaks (convert remaining \n to <br>)
-            html = html.replace(/\n/g, '<br>');
-            
-            return html;
-        }
-
+        // ========== PREVIEW MODAL ==========
         function previewDocumentText(docId) {
             const modal = document.getElementById('previewModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalContent = document.getElementById('modalContent');
-            
-            modalContent.textContent = 'Đang trích xuất nội dung văn bản AI sẽ đọc...';
-            modalTitle.textContent = 'Đang tải...';
+            document.getElementById('modalTitle').textContent = 'Đang tải...';
+            document.getElementById('modalContent').textContent = 'Đang trích xuất...';
             modal.style.display = 'flex';
-
             fetch(`?handler=DocumentText&docId=${docId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    modalTitle.textContent = `[${data.fileType.toUpperCase()}] ${data.title}`;
-                    modalContent.textContent = data.text || '(Tài liệu rỗng hoặc không trích xuất được ký tự nào)';
-                } else {
-                    modalContent.textContent = `Lỗi: ${data.message}`;
-                }
-            })
-            .catch(err => {
-                modalContent.textContent = `Lỗi kết nối máy chủ: ${err.message}`;
-            });
+                .then(r=>r.json())
+                .then(d => {
+                    document.getElementById('modalTitle').textContent = d.success ? `[${d.fileType?.toUpperCase()}] ${d.title}` : 'Lỗi';
+                    document.getElementById('modalContent').textContent = d.success ? (d.text||'(Rỗng)') : d.message;
+                })
+                .catch(e => { document.getElementById('modalContent').textContent = 'Lỗi: ' + e.message; });
         }
-
         function closePreviewModal() {
             document.getElementById('previewModal').style.display = 'none';
         }
+
+        // ========== INIT ==========
+        initSessions();
     </script>
 
-    <!-- MODAL XEM TRƯỚC VĂN BẢN TRÍCH XUẤT (STYLE BRUTALISM) -->
-    <div id="previewModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;">
-        <div style="background-color: #fff; border: 3px solid #000; box-shadow: 8px 8px 0px #000; width: 650px; max-width: 90%; padding: 25px; display: flex; flex-direction: column; max-height: 85vh; transform: translate(0, 0);">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 15px;">
-                <h3 id="modalTitle" style="font-weight: 900; font-size: 18px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 85%; color: var(--pink);">Xem trước nội dung</h3>
-                <button onclick="closePreviewModal()" style="background: none; border: none; font-size: 24px; font-weight: 900; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;">&times;</button>
+    <!-- MODAL XEM TRƯỚC VĂN BẢN -->
+    <div id="previewModal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+        <div style="background:#fff;border:3px solid #000;box-shadow:8px 8px 0 #000;width:650px;max-width:90%;padding:25px;display:flex;flex-direction:column;max-height:85vh;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #000;padding-bottom:12px;margin-bottom:15px;">
+                <h3 id="modalTitle" style="font-weight:900;font-size:18px;margin:0;color:var(--pink);">Xem trước</h3>
+                <button onclick="closePreviewModal()" style="background:none;border:none;font-size:24px;font-weight:900;cursor:pointer;">&times;</button>
             </div>
-            <div id="modalContent" style="flex: 1; overflow-y: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; background-color: #f8f9fa; padding: 15px; border: 2px solid #000; line-height: 1.6; max-height: 55vh; color: #000; text-align: left;">
-                Đang tải nội dung...
-            </div>
-            <div style="margin-top: 20px; text-align: right; display: flex; justify-content: flex-end;">
-                <button onclick="closePreviewModal()" style="background-color: #000; color: #fff; border: 2px solid #000; padding: 8px 20px; font-weight: 900; cursor: pointer; box-shadow: 2px 2px 0px #000; font-family: 'Montserrat', sans-serif; transition: 0.1s;" onmousedown="this.style.transform='translate(2px, 2px)'; this.style.boxShadow='0px 0px 0px #000';" onmouseup="this.style.transform='translate(0,0)'; this.style.boxShadow='2px 2px 0px #000';">Đóng</button>
+            <div id="modalContent" style="flex:1;overflow-y:auto;font-family:monospace;font-size:13px;white-space:pre-wrap;background:#f8f9fa;padding:15px;border:2px solid #000;line-height:1.6;max-height:55vh;">Đang tải...</div>
+            <div style="margin-top:20px;text-align:right;">
+                <button onclick="closePreviewModal()" style="background:#000;color:#fff;border:2px solid #000;padding:8px 20px;font-weight:900;cursor:pointer;">Đóng</button>
             </div>
         </div>
     </div>
-<script>
-    sessions = [];
-    currentSessionId = null;
-    localStorage.removeItem('edu_chat_sessions');
-    localStorage.removeItem('edu_current_session_id');
-    saveSessions = function() { };
-
-    function normalizeServerSession(session) {
-        return {
-            id: session.id,
-            title: session.title || 'Cuộc trò chuyện mới',
-            messages: Array.isArray(session.messages)
-                ? session.messages.map(msg => ({
-                    role: msg.role,
-                    text: msg.text,
-                    timestamp: msg.timestamp,
-                    citations: Array.isArray(msg.citations) ? msg.citations : []
-                }))
-                : []
-        };
-    }
-
-    function buildCitationHtml(citations) {
-        if (!Array.isArray(citations) || citations.length === 0) {
-            return '';
-        }
-
-        const items = citations.map(citation => {
-        const title = escapeHtml(citation.documentTitle || 'Tài liệu');
-            const chapter = citation.chapterTitle ? `<span style="color:#555;">${escapeHtml(citation.chapterTitle)}</span>` : '';
-            const snippet = citation.snippet ? `<div style="font-size: 11px; color: #444; line-height: 1.5;">${escapeHtml(citation.snippet)}</div>` : '';
-        const chunk = citation.chunkOrderIndex > 0 ? `Đoạn ${citation.chunkOrderIndex}` : 'Tóm tắt';
-
-            return `
-                <div style="border: 2px solid #000; box-shadow: 2px 2px 0 #000; background: #fff8dc; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span style="font-size:10px; font-weight:900; border:1px solid #000; background:#facc15; padding:2px 6px;">NGUỒN</span>
-                        <span style="font-size:11px; font-weight:800;">${title}</span>
-                        <span style="font-size:10px; color:#555;">${chunk}</span>
-                    </div>
-                    ${chapter}
-                    ${snippet}
-                </div>
-            `;
-        }).join('');
-
-        return `
-            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed #ddd; padding-top: 10px;">
-                <div style="font-size: 11px; font-weight: 900; color: #8b3d3d; text-transform: uppercase;">Nguồn tham khảo</div>
-                ${items}
-            </div>
-        `;
-    }
-
-    renderMessageUI = function(role, text, citations = []) {
-        const div = document.createElement('div');
-        const isUser = role === 'user';
-        div.className = isUser ? 'message message-user' : 'message message-bot';
-
-        const avatarIcon = isUser ? 'fa-user' : 'fa-robot';
-        const senderName = isUser ? '@User.Identity?.Name' : 'Trợ lý AI';
-        const msgContent = isUser
-            ? `<p class="message-text">${escapeHtml(text)}</p>`
-            : `<div class="message-text" style="font-weight: 500; font-size: 14px; line-height: 1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations)}`;
-
-        div.innerHTML = `
-            <div class="chat-avatar"><i class="fa-solid ${avatarIcon}"></i></div>
-            <div class="message-content">
-                <div class="message-sender">${senderName}</div>
-                ${msgContent}
-            </div>
-        `;
-        chatMessages.appendChild(div);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    renderActiveSessionMessages = function() {
-        const activeSession = sessions.find(s => s.id === currentSessionId);
-        chatMessages.innerHTML = '';
-
-        if (activeSession && activeSession.messages.length > 0) {
-            activeSession.messages.forEach(msg => {
-                renderMessageUI(msg.role, msg.text, msg.citations || []);
-            });
-        } else {
-            chatMessages.innerHTML = `
-                <div class="message message-bot">
-                    <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
-                    <div class="message-content">
-                            <div class="message-sender">Trợ lý AI</div>
-                            <p class="message-text">Chào bạn! Tôi là trợ lý học tập AI của bạn. Hãy chọn tài liệu ôn tập ở cột bên trái và gửi câu hỏi để bắt đầu trò chuyện nhé!</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    async function postSessionJson(url, payload) {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload ?? {})
-        });
-
-        return response.json();
-    }
-
-    async function reloadSessions(preferredSessionId = currentSessionId) {
-        const response = await fetch('?handler=Sessions');
-        const data = await response.json();
-
-        if (!data.success || !Array.isArray(data.sessions)) {
-            throw new Error(data.message || 'Không thể tải lịch sử chat.');
-        }
-
-        sessions = data.sessions.map(normalizeServerSession);
-
-        if (sessions.length === 0) {
-            currentSessionId = null;
-            return;
-        }
-
-        const hasPreferred = preferredSessionId != null && sessions.some(s => s.id === preferredSessionId);
-        currentSessionId = hasPreferred ? preferredSessionId : sessions[0].id;
-    }
-
-    initSessions = async function() {
-        try {
-            await reloadSessions();
-
-            if (sessions.length === 0) {
-                await createNewSession();
-                return;
-            }
-
-            renderSessionsList();
-            renderActiveSessionMessages();
-        } catch (error) {
-            console.error('Không thể khởi tạo phiên chat:', error);
-            const container = document.getElementById('sessionsListBox');
-            if (container) {
-                container.innerHTML = '<div style="font-size: 11px; color: #d93856; font-style: italic; text-align: center; padding: 15px 0;">Không thể tải lịch sử chat.</div>';
-            }
-            renderActiveSessionMessages();
-        }
-    };
-
-    createNewSession = async function() {
-        try {
-            const data = await postSessionJson('?handler=CreateSession', {});
-            if (!data.success || !data.session) {
-                throw new Error(data.message || 'Không tạo được phiên chat.');
-            }
-
-            const session = normalizeServerSession(data.session);
-                ${items}
-            </div>
-        `;
-    }
-
-    renderMessageUI = function(role, text, citations = []) {
-        const div = document.createElement('div');
-        const isUser = role === 'user';
-        div.className = isUser ? 'message message-user' : 'message message-bot';
-
-        const avatarIcon = isUser ? 'fa-user' : 'fa-robot';
-        const senderName = isUser ? '@User.Identity?.Name' : 'Trợ lý AI';
-        const msgContent = isUser
-            ? `<p class="message-text">${escapeHtml(text)}</p>`
-            : `<div class="message-text" style="font-weight: 500; font-size: 14px; line-height: 1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations)}`;
-
-        div.innerHTML = `
-            <div class="chat-avatar"><i class="fa-solid ${avatarIcon}"></i></div>
-            <div class="message-content">
-                <div class="message-sender">${senderName}</div>
-                ${msgContent}
-            </div>
-        `;
-        chatMessages.appendChild(div);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    renderActiveSessionMessages = function() {
-        const text = document.querySelector('#chatMessages .message-bot .message-text');
-        if (text && text.textContent.includes('Ch')) {
-            text.textContent = 'Chào bạn! Tôi là trợ lý học tập AI của bạn. Hãy chọn tài liệu ôn tập ở cột bên trái và gửi câu hỏi để bắt đầu trò chuyện nhé!';
-        }
-
-        const input = document.getElementById('messageInput');
-        if (input) {
-            input.placeholder = 'Nhập tin nhắn của bạn...';
-        }
-
-        const sendButton = document.querySelector('.send-btn');
-        if (sendButton) {
-            sendButton.innerHTML = 'Gửi <i class="fa-solid fa-paper-plane"></i>';
-        }
-    }
-
-    if (typeof renderMessageUI === 'function') {
-        const originalRenderMessageUI = renderMessageUI;
-        renderMessageUI = function(role, text, citations = []) {
-            const result = originalRenderMessageUI(role, text, citations);
-            applyChatVietnameseCopy();
-            return result;
-        };
-    }
-
-    if (typeof renderActiveSessionMessages === 'function') {
-        const originalRenderActiveSessionMessages = renderActiveSessionMessages;
-        renderActiveSessionMessages = function() {
-            const result = originalRenderActiveSessionMessages();
-            applyChatVietnameseCopy();
-            return result;
-        };
-    }
-
-    applyChatVietnameseCopy();
-</script>
