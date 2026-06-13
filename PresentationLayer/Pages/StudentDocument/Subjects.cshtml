@@ -11,7 +11,7 @@
             Danh sách Môn học
         </h1>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+        <div id="subjects-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
             @foreach (var subject in Model.Subjects)
             {
                 <div style="background-color: var(--white); border: var(--border); box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column; transition: 0.1s;">
@@ -38,3 +38,26 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/courseHub")
+            .build();
+
+        connection.on("CourseChanged", function () {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('subjects-container').innerHTML;
+                    document.getElementById('subjects-container').innerHTML = newContent;
+                });
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
+    </script>
+}

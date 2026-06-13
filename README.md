@@ -9,6 +9,7 @@ ChatEdu AI là một nền tảng hỗ trợ học tập tích hợp Trợ lý T
 - **Backend:** C# / .NET 8, ASP.NET Core Razor Pages
 - **Database:** PostgreSQL (Entity Framework Core)
 - **AI Engine:** Google Gemini API (`gemini-flash-latest` & `gemini-embedding-001`)
+- **Real-time Sync:** ASP.NET Core SignalR (Đồng bộ dữ liệu thời gian thực không cần tải lại trang)
 - **Tương tác Frontend:** HTML, CSS (Custom Design), JavaScript, Bootstrap
 - **Xử lý tài liệu:** Trích xuất nội dung từ định dạng `.pdf`, `.docx`, `.pptx` (Sử dụng PdfPig và OpenXML).
 
@@ -59,9 +60,10 @@ Hệ thống được chia làm hai vai trò chính: **Giảng Viên** và **Sin
 
 ### 👩‍🏫 Dành Cho Giảng Viên (Quản lý nội dung)
 1. **Đăng nhập:** Đăng nhập bằng tài khoản Giảng viên.
-2. **Quản lý Môn học:** 
-   - Truy cập trang "Môn học của tôi".
-   - Tạo mới, chỉnh sửa, hoặc xóa môn học.
+2. **Quản lý Môn học (Real-time Sync):** 
+   - Truy cập trang "Môn học của tôi" hoặc "Tất cả môn học".
+   - Thêm mới, chỉnh sửa, hoặc xóa môn học.
+   - ⚡ *Tính năng SignalR*: Mọi thay đổi về môn học (Thêm/Sửa/Xóa) sẽ ngay lập tức được đồng bộ theo thời gian thực (real-time) tới tất cả Giảng viên, Sinh viên và Admin đang online mà không cần tải lại trang.
    - Thêm các "Chương" (Chapters) vào từng môn học để phân chia kiến thức rõ ràng.
 3. **Quản lý Tài liệu:**
    - Truy cập trang "Tài liệu".

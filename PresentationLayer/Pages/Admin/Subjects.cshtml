@@ -38,7 +38,7 @@
         </div>
 
         <!-- Danh sách Môn học -->
-        <div style="background-color: var(--white); border: var(--border); box-shadow: var(--shadow); padding: 20px;">
+        <div id="subjects-container" style="background-color: var(--white); border: var(--border); box-shadow: var(--shadow); padding: 20px;">
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="border-bottom: 3px solid var(--black);">
@@ -178,5 +178,25 @@
             document.getElementById('updateSubLecturer').value = lecturerId;
             document.getElementById('updateSubjectModal').style.display = 'flex';
         }
+
+        // SignalR realtime update
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/courseHub")
+            .build();
+
+        connection.on("CourseChanged", function () {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('subjects-container').innerHTML;
+                    document.getElementById('subjects-container').innerHTML = newContent;
+                });
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
     </script>
 }

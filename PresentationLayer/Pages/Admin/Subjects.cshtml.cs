@@ -6,6 +6,8 @@ using BussinessLayer.DTOs;
 using BussinessLayer.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -13,11 +15,13 @@ namespace PresentationLayer.Pages.Admin
     {
         private readonly ISubjectService _subjectService;
         private readonly IUserService _userService;
+        private readonly IHubContext<CourseHub> _hubContext;
 
-        public SubjectsModel(ISubjectService subjectService, IUserService userService)
+        public SubjectsModel(ISubjectService subjectService, IUserService userService, IHubContext<CourseHub> hubContext)
         {
             _subjectService = subjectService;
             _userService = userService;
+            _hubContext = hubContext;
         }
 
         public IEnumerable<SubjectDto> Subjects { get; set; } = new List<SubjectDto>();
@@ -51,6 +55,7 @@ namespace PresentationLayer.Pages.Admin
             if (!string.IsNullOrWhiteSpace(NewCode) && !string.IsNullOrWhiteSpace(NewName))
             {
                 await _subjectService.AddSubjectAsync(NewCode, NewName, NewLecturerId);
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage();
         }
@@ -60,6 +65,7 @@ namespace PresentationLayer.Pages.Admin
             if (UpdateId > 0 && !string.IsNullOrWhiteSpace(UpdateCode) && !string.IsNullOrWhiteSpace(UpdateName))
             {
                 await _subjectService.UpdateSubjectAsync(UpdateId, UpdateCode, UpdateName, UpdateLecturerId);
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage();
         }
@@ -67,12 +73,14 @@ namespace PresentationLayer.Pages.Admin
         public async Task<IActionResult> OnPostDeleteSubjectAsync(int id)
         {
             await _subjectService.SoftDeleteSubjectAsync(id);
+            await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostRestoreSubjectAsync(int id)
         {
             await _subjectService.RestoreSubjectAsync(id);
+            await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage();
         }
     }
