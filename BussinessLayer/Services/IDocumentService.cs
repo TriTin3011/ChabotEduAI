@@ -16,6 +16,7 @@ namespace BussinessLayer.Services
         Task<int> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId, string? extractedContent);
         Task<bool> ProcessDocumentAsync(int documentId, string extractedContent);
         Task<bool> ProcessDocumentEmbeddingAsync(int documentId);
+        Task<bool> UpdateDocumentChapterAsync(int documentId, int? chapterId);
         Task<bool> DeleteDocumentAsync(int id);
     }
 }

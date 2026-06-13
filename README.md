@@ -62,8 +62,8 @@ Hệ thống được chia làm hai vai trò chính: **Giảng Viên** và **Sin
 1. **Đăng nhập:** Đăng nhập bằng tài khoản Giảng viên.
 2. **Quản lý Môn học (Real-time Sync):** 
    - Truy cập trang "Môn học của tôi" hoặc "Tất cả môn học".
-   - Thêm mới, chỉnh sửa, hoặc xóa môn học.
-   - ⚡ *Tính năng SignalR*: Mọi thay đổi về môn học (Thêm/Sửa/Xóa) sẽ ngay lập tức được đồng bộ theo thời gian thực (real-time) tới tất cả Giảng viên, Sinh viên và Admin đang online mà không cần tải lại trang.
+   - **Lưu ý:** Việc tạo mới và xóa môn học do **Admin** đảm nhiệm. Giảng viên chỉ có quyền **sửa** (đổi tên/mã) các môn học mà mình được phân công phụ trách.
+   - ⚡ *Tính năng SignalR*: Mọi thay đổi về môn học (Thêm/Sửa/Xóa từ Admin/Giảng viên) sẽ ngay lập tức được đồng bộ theo thời gian thực (real-time) tới tất cả Giảng viên, Sinh viên và Admin đang online mà không cần tải lại trang.
    - Thêm các "Chương" (Chapters) vào từng môn học để phân chia kiến thức rõ ràng.
 3. **Quản lý Tài liệu:**
    - Truy cập trang "Tài liệu".

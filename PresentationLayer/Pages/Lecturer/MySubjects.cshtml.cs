@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -5,19 +6,30 @@ using BussinessLayer.DTOs;
 using BussinessLayer.Services;
 using System.Security.Claims;
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
 
 namespace PresentationLayer.Pages.Lecturer
 {
     public class MySubjectsModel : PageModel
     {
         private readonly ISubjectService _subjectService;
+        private readonly IHubContext<CourseHub> _hubContext;
 
-        public MySubjectsModel(ISubjectService subjectService)
+        public MySubjectsModel(ISubjectService subjectService, IHubContext<CourseHub> hubContext)
         {
             _subjectService = subjectService;
+            _hubContext = hubContext;
         }
 
         public IEnumerable<SubjectDto> Subjects { get; set; } = new List<SubjectDto>();
+
+        [BindProperty]
+        public int UpdateId { get; set; }
+        [BindProperty]
+        public string UpdateCode { get; set; } = "";
+        [BindProperty]
+        public string UpdateName { get; set; } = "";
 
         public async Task OnGetAsync()
         {
@@ -26,6 +38,22 @@ namespace PresentationLayer.Pages.Lecturer
             {
                 Subjects = await _subjectService.GetSubjectsByLecturerIdAsync(userId);
             }
+        }
+
+        public async Task<IActionResult> OnPostUpdateSubjectAsync()
+        {
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
+            if (int.TryParse(userIdStr, out int userId) && UpdateId > 0 && !string.IsNullOrWhiteSpace(UpdateCode) && !string.IsNullOrWhiteSpace(UpdateName))
+            {
+                // Verify lecturer owns the subject
+                var subject = await _subjectService.GetSubjectByIdAsync(UpdateId);
+                if (subject != null && subject.LecturerId == userId)
+                {
+                    await _subjectService.UpdateSubjectAsync(UpdateId, UpdateCode, UpdateName, userId);
+                    await _hubContext.Clients.All.SendAsync("CourseChanged");
+                }
+            }
+            return RedirectToPage();
         }
     }
 }

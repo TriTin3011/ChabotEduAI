@@ -15,5 +15,6 @@ namespace BussinessLayer.Services
         Task<bool> RestoreSubjectAsync(int id);
         Task<bool> AddChapterAsync(int subjectId, string title, int orderIndex);
         Task<bool> UpdateChapterAsync(int chapterId, string title);
+        Task<bool> DeleteChapterWithOptionsAsync(int chapterId, bool keepDocuments);
     }
 }

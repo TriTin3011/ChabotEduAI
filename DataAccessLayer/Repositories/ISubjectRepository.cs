@@ -12,8 +12,10 @@ namespace DataAccessLayer.Repositories
         Task<IEnumerable<Subject>> GetSubjectsByLecturerIdAsync(int lecturerId);
         Task AddSubjectAsync(Subject subject);
         Task UpdateSubjectAsync(Subject subject);
+        Task SoftDeleteSubjectAsync(int id);
         Task AddChapterAsync(Chapter chapter);
         Task UpdateChapterAsync(Chapter chapter);
+        Task DeleteChapterWithOptionsAsync(int chapterId, bool keepDocuments);
         Task<Chapter?> GetChapterByIdAsync(int id);
     }
 }

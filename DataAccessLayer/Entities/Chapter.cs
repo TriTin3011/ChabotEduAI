@@ -19,5 +19,7 @@ namespace DataAccessLayer.Entities
         public int OrderIndex { get; set; } = 0;
         
         public ICollection<Document> Documents { get; set; } = new List<Document>();
+        
+        public bool IsDeleted { get; set; } = false;
     }
 }

@@ -31,5 +31,7 @@ namespace DataAccessLayer.Entities
         
         public int? ChapterId { get; set; }
         public Chapter? Chapter { get; set; }
+        
+        public bool IsDeleted { get; set; } = false;
     }
 }

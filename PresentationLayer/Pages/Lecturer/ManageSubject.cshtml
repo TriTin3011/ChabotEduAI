@@ -37,9 +37,10 @@
         </div>
         <p style="font-weight: 700; color: #555; margin-bottom: 30px;">Quản lý cấu trúc chương học và tài liệu</p>
 
-        <!-- Tài liệu chung của môn học (Không thuộc chương nào) -->
-        @{ var subjectDocs = Model.Subject.Documents.Where(d => d.ChapterId == null).ToList(); }
-        @if (subjectDocs.Any())
+        <div id="manage-subject-container">
+            <!-- Tài liệu chung của môn học (Không thuộc chương nào) -->
+            @{ var subjectDocs = Model.Subject.Documents.Where(d => d.ChapterId == null).ToList(); }
+            @if (subjectDocs.Any())
         {
             <div style="background-color: var(--white); border: var(--border); box-shadow: 4px 4px 0px var(--black); padding: 20px; margin-bottom: 20px;">
                 <h2 style="font-weight: 900; font-size: 18px; color: var(--blue); border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">TÀI LIỆU CHUNG</h2>
@@ -69,6 +70,9 @@
                                     </a>
                                     @if(Model.IsOwner)
                                     {
+                                        <button type="button" onclick="openMoveDocModal(@doc.Id, '@doc.Title')" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: var(--green); padding: 0;">
+                                            <i class="fa-solid fa-arrows-up-down-left-right"></i> Chuyển
+                                        </button>
                                         <form method="post" asp-page-handler="DeleteDocument" asp-route-id="@Model.Subject.Id" asp-route-docId="@doc.Id"
                                               onsubmit="return confirm('Xóa tài liệu?');" style="display:inline;">
                                             <button type="submit" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: #dc2626; padding: 0;">
@@ -97,9 +101,14 @@
 
                         @if(Model.IsOwner)
                         {
-                            <button type="button" onclick="openChapterModal(@chapter.Id, '@chapter.Title')" class="brutal-btn" style="background-color: var(--white); color: var(--black); border: 2px solid var(--black); padding: 4px 10px; font-weight: 800; font-size: 12px; box-shadow: 2px 2px 0px var(--black);">
-                                <i class="fa-solid fa-pen"></i> SỬA TÊN CHƯƠNG
-                            </button>
+                            <div style="display: flex; gap: 5px;">
+                                <button type="button" onclick="openChapterModal(@chapter.Id, '@chapter.Title')" class="brutal-btn" style="background-color: var(--white); color: var(--black); border: 2px solid var(--black); padding: 4px 10px; font-weight: 800; font-size: 12px; box-shadow: 2px 2px 0px var(--black);">
+                                    <i class="fa-solid fa-pen"></i> SỬA
+                                </button>
+                                <button type="button" onclick="openDeleteChapterModal(@chapter.Id, '@chapter.Title', @chapter.Documents.Count)" class="brutal-btn" style="background-color: #ff4d4f; color: white; border: 2px solid var(--black); padding: 4px 10px; font-weight: 800; font-size: 12px; box-shadow: 2px 2px 0px var(--black);">
+                                    <i class="fa-solid fa-trash"></i> XÓA
+                                </button>
+                            </div>
                         }
                     </div>
 
@@ -129,6 +138,9 @@
                                         </a>
                                         @if(Model.IsOwner)
                                         {
+                                            <button type="button" onclick="openMoveDocModal(@doc.Id, '@doc.Title')" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: var(--green); padding: 0;">
+                                                <i class="fa-solid fa-arrows-up-down-left-right"></i> Chuyển
+                                            </button>
                                             <form method="post" asp-page-handler="DeleteDocument" asp-route-id="@Model.Subject.Id" asp-route-docId="@doc.Id"
                                                   onsubmit="return confirm('Xóa tài liệu \'@doc.Title\'? Hành động này không thể hoàn tác!');" style="display:inline;">
                                                 <button type="submit" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: #dc2626; padding: 0;">
@@ -161,7 +173,6 @@
                 </div>
             }
         </div>
-
     </div>
 </div>
 
@@ -224,6 +235,65 @@
         </div>
     </div>
 
+    <!-- MODAL XÓA CHƯƠNG -->
+    <div id="deleteChapterModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 450px; max-width: 90%;">
+            <h2 style="font-weight: 900; color: #dc2626; margin-bottom: 10px; text-transform: uppercase;">XÓA CHƯƠNG</h2>
+            <p id="deleteChapterPrompt" style="font-weight: 700; color: #555; margin-bottom: 20px;"></p>
+
+            <form id="deleteChapterForm" method="post" asp-page-handler="DeleteChapter" asp-route-id="@Model.Subject.Id">
+                <input type="hidden" id="deleteChapterIdInput" name="chapterId" value="0" />
+                
+                <div id="deleteOptionsContainer" style="display: none; margin-bottom: 20px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 10px;">Xử lý tài liệu trong chương:</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+                            <input type="radio" name="DeleteChapterOption" value="keep" checked style="accent-color: var(--blue); transform: scale(1.2);" />
+                            Đưa các tài liệu về mục "Tài liệu chung"
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+                            <input type="radio" name="DeleteChapterOption" value="delete" style="accent-color: var(--blue); transform: scale(1.2);" />
+                            Xóa luôn các tài liệu
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeModals()" class="brutal-btn" style="background: #ccc; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">HỦY</button>
+                    <button type="submit" class="brutal-btn" style="background: #dc2626; color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">XÁC NHẬN XÓA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CHUYỂN TÀI LIỆU -->
+    <div id="moveDocModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 450px; max-width: 90%;">
+            <h2 style="font-weight: 900; color: var(--green); margin-bottom: 20px; text-transform: uppercase;">CHUYỂN VỊ TRÍ TÀI LIỆU</h2>
+            <p style="font-weight: 700; color: #555; margin-bottom: 15px;">Đang chuyển tài liệu: <strong id="moveDocTitle" style="color: var(--black);"></strong></p>
+
+            <form method="post" asp-page-handler="MoveDocument" asp-route-id="@Model.Subject.Id">
+                <input type="hidden" id="moveDocumentId" name="MoveDocumentId" value="0" />
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chọn nơi chuyển đến</label>
+                    <select name="MoveToChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
+                        <option value="">-- Tài liệu chung (Không thuộc chương nào) --</option>
+                        @foreach(var c in Model.Subject.Chapters.OrderBy(x => x.OrderIndex))
+                        {
+                            <option value="@c.Id">@c.Title</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeModals()" class="brutal-btn" style="background: #ccc; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">HỦY</button>
+                    <button type="submit" class="brutal-btn" style="background: var(--green); color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">CHUYỂN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openChapterModal(id, title) {
             document.getElementById('chapterModal').style.display = 'flex';
@@ -245,9 +315,49 @@
             document.getElementById('uploadModal').style.display = 'flex';
         }
 
+        function openDeleteChapterModal(id, title, docCount) {
+            document.getElementById('deleteChapterModal').style.display = 'flex';
+            document.getElementById('deleteChapterIdInput').value = id;
+            
+            if (docCount > 0) {
+                document.getElementById('deleteChapterPrompt').innerHTML = `Bạn đang xóa chương <strong>${title}</strong>. Có <strong>${docCount}</strong> tài liệu đang nằm trong chương này.`;
+                document.getElementById('deleteOptionsContainer').style.display = 'block';
+            } else {
+                document.getElementById('deleteChapterPrompt').innerHTML = `Bạn có chắc muốn xóa chương <strong>${title}</strong>? Chương này hiện không có tài liệu nào.`;
+                document.getElementById('deleteOptionsContainer').style.display = 'none';
+            }
+        }
+
+        function openMoveDocModal(docId, docTitle) {
+            document.getElementById('moveDocModal').style.display = 'flex';
+            document.getElementById('moveDocumentId').value = docId;
+            document.getElementById('moveDocTitle').innerText = docTitle;
+        }
+
         function closeModals() {
             document.getElementById('chapterModal').style.display = 'none';
             document.getElementById('uploadModal').style.display = 'none';
+            document.getElementById('deleteChapterModal').style.display = 'none';
+            document.getElementById('moveDocModal').style.display = 'none';
         }
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/courseHub")
+            .build();
+
+        connection.on("CourseChanged", function () {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('manage-subject-container').innerHTML;
+                    document.getElementById('manage-subject-container').innerHTML = newContent;
+                });
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
     </script>
 }

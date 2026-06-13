@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
 
 namespace PresentationLayer.Pages.Lecturer
 {
@@ -15,12 +17,14 @@ namespace PresentationLayer.Pages.Lecturer
         private readonly ISubjectService _subjectService;
         private readonly IDocumentService _documentService;
         private readonly IFileTextExtractorService _textExtractor;
+        private readonly IHubContext<CourseHub> _hubContext;
 
-        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor)
+        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor, IHubContext<CourseHub> hubContext)
         {
             _subjectService = subjectService;
             _documentService = documentService;
             _textExtractor = textExtractor;
+            _hubContext = hubContext;
         }
 
         public SubjectDto Subject { get; set; } = default!;
@@ -70,6 +74,7 @@ namespace PresentationLayer.Pages.Lecturer
                 var subject = await _subjectService.GetSubjectByIdAsync(id);
                 int order = (subject?.Chapters?.Count ?? 0) + 1;
                 await _subjectService.AddChapterAsync(id, NewChapterTitle, order);
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage(new { id = id });
         }
@@ -79,7 +84,19 @@ namespace PresentationLayer.Pages.Lecturer
             if (UpdateChapterId > 0 && !string.IsNullOrWhiteSpace(UpdateChapterTitle))
             {
                 await _subjectService.UpdateChapterAsync(UpdateChapterId, UpdateChapterTitle);
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
+            return RedirectToPage(new { id = id });
+        }
+
+        [BindProperty]
+        public string DeleteChapterOption { get; set; } = "delete";
+
+        public async Task<IActionResult> OnPostDeleteChapterAsync(int id, int chapterId)
+        {
+            bool keepDocuments = DeleteChapterOption == "keep";
+            await _subjectService.DeleteChapterWithOptionsAsync(chapterId, keepDocuments);
+            await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage(new { id = id });
         }
 
@@ -115,14 +132,32 @@ namespace PresentationLayer.Pages.Lecturer
                     // Tự động băm và nhúng ngay lập tức
                     await _documentService.ProcessDocumentEmbeddingAsync(documentId);
                 }
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
 
+            return RedirectToPage(new { id = id });
+        }
+
+        [BindProperty]
+        public int MoveDocumentId { get; set; }
+
+        [BindProperty]
+        public int? MoveToChapterId { get; set; }
+
+        public async Task<IActionResult> OnPostMoveDocumentAsync(int id)
+        {
+            if (MoveDocumentId > 0)
+            {
+                await _documentService.UpdateDocumentChapterAsync(MoveDocumentId, MoveToChapterId);
+                await _hubContext.Clients.All.SendAsync("CourseChanged");
+            }
             return RedirectToPage(new { id = id });
         }
 
         public async Task<IActionResult> OnPostDeleteDocumentAsync(int id, int docId)
         {
             await _documentService.DeleteDocumentAsync(docId);
+            await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage(new { id = id });
         }
     }

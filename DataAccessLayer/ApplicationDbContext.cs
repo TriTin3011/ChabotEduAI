@@ -24,6 +24,11 @@ namespace DataAccessLayer
 
             base.OnModelCreating(modelBuilder);
             
+            // Global Query Filters cho Soft Delete
+            modelBuilder.Entity<Subject>().HasQueryFilter(s => !s.IsDeleted);
+            modelBuilder.Entity<Chapter>().HasQueryFilter(c => !c.IsDeleted);
+            modelBuilder.Entity<Document>().HasQueryFilter(d => !d.IsDeleted);
+            
             // Seed 1 vài dữ liệu demo
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Username = "student", PasswordHash = "student123", Role = "Student" },

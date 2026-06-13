@@ -72,6 +72,12 @@ namespace DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task UpdateDocumentAsync(Document document)
+        {
+            _context.Documents.Update(document);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task AddDocumentChunksAsync(IEnumerable<DocumentChunk> chunks)
         {
             _context.DocumentChunks.AddRange(chunks);
@@ -116,10 +122,11 @@ namespace DataAccessLayer.Repositories
         {
             var doc = await _context.Documents.FindAsync(id);
             if (doc == null) return false;
-            // Remove chunks first
             var chunks = _context.DocumentChunks.Where(c => c.DocumentId == id);
             _context.DocumentChunks.RemoveRange(chunks);
-            _context.Documents.Remove(doc);
+            
+            doc.IsDeleted = true;
+            _context.Documents.Update(doc);
             await _context.SaveChangesAsync();
             return true;
         }

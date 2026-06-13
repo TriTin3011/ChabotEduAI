@@ -145,8 +145,7 @@ namespace BussinessLayer.Services
             var s = await _subjectRepository.GetSubjectByIdAsync(id);
             if (s == null) return false;
 
-            s.IsDeleted = true;
-            await _subjectRepository.UpdateSubjectAsync(s);
+            await _subjectRepository.SoftDeleteSubjectAsync(id);
             return true;
         }
 
@@ -179,6 +178,15 @@ namespace BussinessLayer.Services
 
             chapter.Title = title;
             await _subjectRepository.UpdateChapterAsync(chapter);
+            return true;
+        }
+
+        public async Task<bool> DeleteChapterWithOptionsAsync(int chapterId, bool keepDocuments)
+        {
+            var chapter = await _subjectRepository.GetChapterByIdAsync(chapterId);
+            if (chapter == null) return false;
+
+            await _subjectRepository.DeleteChapterWithOptionsAsync(chapterId, keepDocuments);
             return true;
         }
     }

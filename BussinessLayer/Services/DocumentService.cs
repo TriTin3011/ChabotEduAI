@@ -123,6 +123,17 @@ namespace BussinessLayer.Services
             return doc?.Content ?? string.Empty;
         }
 
+
+        public async Task<bool> UpdateDocumentChapterAsync(int documentId, int? chapterId)
+        {
+            var document = await _documentRepository.GetDocumentByIdAsync(documentId);
+            if (document == null) return false;
+
+            document.ChapterId = chapterId;
+            await _documentRepository.UpdateDocumentAsync(document);
+            return true;
+        }
+
         public async Task<int> AddDocumentAsync(string title, string fileType, string fileUrl, int? subjectId, int? chapterId, int? uploaderId)
         {
             return await AddDocumentAsync(title, fileType, fileUrl, subjectId, chapterId, uploaderId, null);

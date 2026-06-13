@@ -31,9 +31,6 @@
         <h1 style="color: var(--pink); font-weight: 900; font-size: 28px; text-transform: uppercase; margin: 0;">
             TẤT CẢ MÔN HỌC TRONG HỆ THỐNG
         </h1>
-        <button onclick="document.getElementById('createSubjectModal').style.display='flex'" class="brutal-btn" style="background-color: var(--pink); color: var(--white); border: 2px solid var(--black); padding: 10px 20px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
-            <i class="fa-solid fa-plus"></i> THÊM MÔN HỌC
-        </button>
     </div>
     <p style="margin-bottom: 20px; font-weight: 600;">Danh sách toàn bộ môn học. Bạn có quyền xem tài liệu của tất cả các môn.</p>
 
@@ -43,12 +40,6 @@
             <div style="background-color: var(--white); border: 3px solid var(--black); box-shadow: 6px 6px 0px 0px var(--black); padding: 20px; width: 300px; display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                     <h2 style="font-weight: 900; color: var(--pink); margin: 0;">@subject.Code</h2>
-                    <form method="post" asp-page-handler="DeleteSubject" onsubmit="return confirm('Bạn có chắc chắn muốn xóa môn học này?');">
-                        <input type="hidden" name="id" value="@subject.Id" />
-                        <button type="submit" class="brutal-btn" style="background-color: #ff4d4f; color: white; border: 2px solid var(--black); padding: 5px; font-weight: 900; cursor: pointer; box-shadow: 2px 2px 0px var(--black);" title="Xóa môn học">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </form>
                 </div>
                 <h3 style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">@subject.Name</h3>
                 <p style="font-weight: 600; font-size: 14px; margin-bottom: 15px; flex-grow: 1;">
@@ -67,26 +58,7 @@
     </div>
 </div>
 
-<!-- Modal Create -->
-<div id="createSubjectModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="document.getElementById('createSubjectModal').style.display='none'">&times;</span>
-        <h2 style="font-weight: 900; margin-bottom: 20px; color: var(--pink);">THÊM MÔN HỌC</h2>
-        <form method="post" asp-page-handler="AddSubject">
-            <div class="form-group">
-                <label>Mã Môn</label>
-                <input type="text" asp-for="NewCode" required placeholder="VD: PRN222" />
-            </div>
-            <div class="form-group">
-                <label>Tên Môn</label>
-                <input type="text" asp-for="NewName" required placeholder="VD: C# Nâng cao" />
-            </div>
-            <button type="submit" class="brutal-btn" style="width: 100%; background-color: var(--pink); color: var(--white); border: 2px solid var(--black); padding: 10px; font-weight: 900; box-shadow: 2px 2px 0px var(--black); margin-top: 10px;">
-                <i class="fa-solid fa-plus"></i> THÊM MỚI
-            </button>
-        </form>
-    </div>
-</div>
+
 
 @section Scripts {
     <script>
