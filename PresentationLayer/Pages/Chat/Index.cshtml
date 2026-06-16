@@ -117,7 +117,13 @@
             flex-direction: column;
             gap: 8px;
             background: #fff;
+            max-height: 180px;
+            overflow-y: auto;
         }
+
+        .doc-folder-content::-webkit-scrollbar { width: 6px; }
+        .doc-folder-content::-webkit-scrollbar-track { background: var(--bg); border-left: 1px solid #ddd; }
+        .doc-folder-content::-webkit-scrollbar-thumb { background: #888; }
 
         .doc-folder-item {
             display: flex;
@@ -231,7 +237,20 @@
             box-shadow: var(--shadow);
         }
         .message-sender { font-weight: 900; font-size: 13px; margin-bottom: 5px; color: var(--black); }
-        .message-text { font-size: 15px; font-weight: 700; line-height: 1.5; margin: 0; }
+        .message-text { font-size: 15px; font-weight: 600; line-height: 1.6; margin: 0; color: #222; }
+        .message-text h1, .message-text h2, .message-text h3 { font-weight: 900; margin-top: 15px; margin-bottom: 10px; color: #000; }
+        .message-text p { margin-bottom: 10px; }
+        .message-text p:last-child { margin-bottom: 0; }
+        .message-text ul, .message-text ol { padding-left: 25px; margin-bottom: 15px; }
+        .message-text li { margin-bottom: 5px; }
+        .message-text code { background: #f3f4f6; padding: 2px 6px; font-family: 'Courier New', Courier, monospace; font-size: 90%; color: #d93856; border: 1px solid #000; font-weight: 700; }
+        .message-text pre { background: #fff8dc; padding: 15px; border: 2px solid #000; font-family: monospace; overflow-x: auto; margin: 15px 0; box-shadow: 4px 4px 0px #000; }
+        .message-text pre code { background: none; padding: 0; border: none; color: #000; font-weight: 500; }
+        .message-text strong { font-weight: 900; color: #000; }
+        .message-text blockquote { border-left: 5px solid var(--pink); padding-left: 15px; margin: 15px 0; color: #444; font-style: italic; background: #fdf2f8; padding-top: 10px; padding-bottom: 10px; border-right: 2px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+        .message-text table { width: 100%; border-collapse: collapse; margin: 15px 0; background: #fff; box-shadow: 3px 3px 0px #000; }
+        .message-text th, .message-text td { border: 2px solid #000; padding: 10px; text-align: left; }
+        .message-text th { background-color: var(--yellow); font-weight: 900; text-transform: uppercase; }
 
         .input-area {
             background: var(--white); border-top: var(--border); padding: 20px;
@@ -477,6 +496,7 @@
 }
 
     <!-- SCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // ========== TOGGLE RESTRICT ==========
         let restrictToDocs = true;
@@ -528,22 +548,16 @@
         function escapeHtml(t) {
             return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
         }
+        
         function formatMarkdown(text) {
             if (!text) return '';
-            let h = escapeHtml(text);
-            h = h.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-            h = h.replace(/\*(.*?)\*/g,'<em>$1</em>');
-            h = h.replace(/`(.*?)`/g,'<code style="background:#f3f4f6;padding:2px 4px;font-family:monospace;font-size:90%;color:#c7254e;">$1</code>');
-            h = h.replace(/```([\s\S]*?)```/g,'<pre style="background:#f8f9fa;padding:12px;border:2px solid #000;font-family:monospace;overflow-x:auto;margin:10px 0;white-space:pre-wrap;">$1</pre>');
-            h = h.replace(/^### (.*?)$/gm,'<h3 style="margin:8px 0;font-weight:800;">$1</h3>');
-            h = h.replace(/^## (.*?)$/gm,'<h2 style="margin:10px 0;font-weight:800;">$1</h2>');
-            h = h.replace(/^# (.*?)$/gm,'<h1 style="margin:12px 0;font-weight:900;">$1</h1>');
-            h = h.replace(/^\s*[-*]\s+(.*?)$/gm,'<li>$1</li>');
-            h = h.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>');
-            h = h.replace(/<\/ul>\s*<ul>/g,'');
-            h = h.replace(/\n/g,'<br>');
-            return h;
+            // Use marked library if available, otherwise fallback to simple text
+            if (typeof marked !== 'undefined') {
+                return marked.parse(text);
+            }
+            return escapeHtml(text).replace(/\n/g, '<br>');
         }
+        
         function buildCitationHtml(citations) {
             if (!Array.isArray(citations) || citations.length === 0) return '';
             const items = citations.map(c => {

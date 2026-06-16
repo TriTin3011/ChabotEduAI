@@ -18,7 +18,7 @@ namespace DataAccessLayer.Entities
         [Required]
         public string Content { get; set; } = string.Empty;
 
-        [Column(TypeName = "vector(3072)")]
+        [Column(TypeName = "vector(768)")]
         public Vector? Embedding { get; set; }
         
         public int OrderIndex { get; set; }

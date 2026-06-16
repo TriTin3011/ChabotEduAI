@@ -25,6 +25,7 @@ builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+builder.Services.AddScoped<IDocumentActivityLogRepository, DocumentActivityLogRepository>();
 
 // Services
 builder.Services.AddHttpClient();
@@ -37,6 +38,7 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+builder.Services.AddScoped<IDocumentActivityLogService, DocumentActivityLogService>();
 builder.Services.AddSingleton<IFileTextExtractorService, FileTextExtractorService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 

@@ -3,6 +3,7 @@ using System;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613114209_AddDocumentActivityLog")]
+    partial class AddDocumentActivityLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -199,7 +202,7 @@ namespace DataAccessLayer.Migrations
                             Status = "Indexed",
                             SubjectId = 2,
                             Title = "Bài giảng Nhập môn AI",
-                            UploadedAt = new DateTime(2026, 6, 16, 21, 41, 2, 973, DateTimeKind.Utc).AddTicks(2115)
+                            UploadedAt = new DateTime(2026, 6, 13, 11, 42, 8, 491, DateTimeKind.Utc).AddTicks(5552)
                         },
                         new
                         {
@@ -212,7 +215,7 @@ namespace DataAccessLayer.Migrations
                             Status = "Indexed",
                             SubjectId = 1,
                             Title = "Bài tập lớn C# nâng cao",
-                            UploadedAt = new DateTime(2026, 6, 16, 21, 41, 2, 973, DateTimeKind.Utc).AddTicks(2120)
+                            UploadedAt = new DateTime(2026, 6, 13, 11, 42, 8, 491, DateTimeKind.Utc).AddTicks(5559)
                         },
                         new
                         {
@@ -225,7 +228,7 @@ namespace DataAccessLayer.Migrations
                             Status = "Indexed",
                             SubjectId = 1,
                             Title = "Slide EF Core",
-                            UploadedAt = new DateTime(2026, 6, 16, 21, 41, 2, 973, DateTimeKind.Utc).AddTicks(2122)
+                            UploadedAt = new DateTime(2026, 6, 13, 11, 42, 8, 491, DateTimeKind.Utc).AddTicks(5562)
                         });
                 });
 
@@ -282,7 +285,7 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(768)");
+                        .HasColumnType("vector(3072)");
 
                     b.Property<int>("OrderIndex")
                         .HasColumnType("integer");
@@ -290,11 +293,6 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentId");
-
-                    b.HasIndex("Embedding");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Embedding"), "hnsw");
-                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_cosine_ops" });
 
                     b.ToTable("DocumentChunks");
                 });

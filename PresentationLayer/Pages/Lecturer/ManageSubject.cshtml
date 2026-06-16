@@ -26,6 +26,9 @@
             @if(Model.IsOwner)
             {
                 <div style="display: flex; gap: 10px;">
+                    <button type="button" onclick="document.getElementById('activityLogModal').style.display='flex'" class="brutal-btn" style="background-color: #fff; color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
+                        <i class="fa-solid fa-clock-rotate-left"></i> LỊCH SỬ
+                    </button>
                     <button type="button" onclick="openChapterModal(0, '')" class="brutal-btn" style="background-color: var(--green); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
                         <i class="fa-solid fa-plus"></i> THÊM CHƯƠNG
                     </button>
@@ -172,9 +175,65 @@
                     Chưa có chương học nào.
                 </div>
             }
-        </div>
     </div>
 </div>
+
+@if(Model.IsOwner && Model.ActivityLogs != null)
+{
+    <!-- MODAL LỊCH SỬ -->
+    <div id="activityLogModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 800px; max-width: 90%; max-height: 80vh; overflow-y: auto; position: relative;">
+            <button type="button" onclick="document.getElementById('activityLogModal').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; font-weight: 900; cursor: pointer;">&times;</button>
+            <h2 style="font-weight: 900; font-size: 22px; color: var(--green); border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase;">
+                <i class="fa-solid fa-clock-rotate-left"></i> LỊCH SỬ THAY ĐỔI TÀI LIỆU
+            </h2>
+            
+            @if(Model.ActivityLogs.Any())
+            {
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background-color: var(--black); color: var(--white); font-weight: 800; font-size: 14px;">
+                            <th style="padding: 10px; border: 2px solid var(--black);">Thời gian</th>
+                            <th style="padding: 10px; border: 2px solid var(--black);">Giảng viên</th>
+                            <th style="padding: 10px; border: 2px solid var(--black);">Hành động</th>
+                            <th style="padding: 10px; border: 2px solid var(--black);">Tài liệu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.ActivityLogs)
+                        {
+                            <tr style="border: 2px solid var(--black); font-weight: 700; font-size: 13px;">
+                                <td style="padding: 10px; border: 2px solid var(--black);">@ToVnTime(log.Timestamp)</td>
+                                <td style="padding: 10px; border: 2px solid var(--black);">@log.UserName</td>
+                                <td style="padding: 10px; border: 2px solid var(--black);">
+                                    @if(log.Action == "Uploaded") { <span style="color: var(--blue);"><i class="fa-solid fa-upload"></i> Đã tải lên</span> }
+                                    else if(log.Action == "Deleted") { <span style="color: #dc2626;"><i class="fa-solid fa-trash"></i> Đã xóa</span> }
+                                    else if(log.Action == "Moved") { <span style="color: var(--green);"><i class="fa-solid fa-arrows-up-down-left-right"></i> Đã chuyển</span> }
+                                    else { @log.Action }
+                                </td>
+                                <td style="padding: 10px; border: 2px solid var(--black);">
+                                    @log.DocumentTitle
+                                    @if (log.DocumentId.HasValue && log.Action != "Deleted")
+                                    {
+                                        <a href="/ViewDocument?id=@log.DocumentId" target="_blank" style="margin-left: 10px; font-size: 12px; color: var(--blue); font-weight: 900; text-decoration: none; border: 1px solid var(--black); padding: 2px 6px; background-color: var(--white); box-shadow: 1px 1px 0px var(--black);">
+                                            <i class="fa-solid fa-eye"></i> Xem
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div style="font-style: italic; color: #777; font-size: 14px; font-weight: 600; text-align: center; padding: 20px;">
+                    Chưa có lịch sử thay đổi tài liệu nào.
+                </div>
+            }
+        </div>
+    </div>
+}
 
 @if(Model.IsOwner)
 {

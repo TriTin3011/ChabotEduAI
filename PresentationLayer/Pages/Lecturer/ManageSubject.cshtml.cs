@@ -18,13 +18,15 @@ namespace PresentationLayer.Pages.Lecturer
         private readonly IDocumentService _documentService;
         private readonly IFileTextExtractorService _textExtractor;
         private readonly IHubContext<CourseHub> _hubContext;
+        private readonly IDocumentActivityLogService _activityLogService;
 
-        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor, IHubContext<CourseHub> hubContext)
+        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor, IHubContext<CourseHub> hubContext, IDocumentActivityLogService activityLogService)
         {
             _subjectService = subjectService;
             _documentService = documentService;
             _textExtractor = textExtractor;
             _hubContext = hubContext;
+            _activityLogService = activityLogService;
         }
 
         public SubjectDto Subject { get; set; } = default!;
@@ -48,6 +50,8 @@ namespace PresentationLayer.Pages.Lecturer
         public IFormFile? UploadFile { get; set; }
 
         public bool IsOwner { get; set; } = false;
+        
+        public List<DocumentActivityLogDto> ActivityLogs { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
@@ -62,6 +66,11 @@ namespace PresentationLayer.Pages.Lecturer
                 {
                     IsOwner = true;
                 }
+            }
+            
+            if (IsOwner)
+            {
+                ActivityLogs = (await _activityLogService.GetLogsBySubjectIdAsync(id)).ToList();
             }
 
             return Page();
@@ -131,6 +140,11 @@ namespace PresentationLayer.Pages.Lecturer
                 {
                     // Tự động băm và nhúng ngay lập tức
                     await _documentService.ProcessDocumentEmbeddingAsync(documentId);
+                    
+                    if (uploaderId.HasValue)
+                    {
+                        await _activityLogService.LogActivityAsync(id, documentId, UploadTitle, uploaderId.Value, "Uploaded");
+                    }
                 }
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
@@ -148,7 +162,15 @@ namespace PresentationLayer.Pages.Lecturer
         {
             if (MoveDocumentId > 0)
             {
+                var doc = await _documentService.GetDocumentByIdAsync(MoveDocumentId);
                 await _documentService.UpdateDocumentChapterAsync(MoveDocumentId, MoveToChapterId);
+                
+                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                if (doc != null && userIdClaim != null && int.TryParse(userIdClaim, out var uId))
+                {
+                    await _activityLogService.LogActivityAsync(id, MoveDocumentId, doc.Title, uId, "Moved");
+                }
+                
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage(new { id = id });
@@ -156,7 +178,15 @@ namespace PresentationLayer.Pages.Lecturer
 
         public async Task<IActionResult> OnPostDeleteDocumentAsync(int id, int docId)
         {
+            var doc = await _documentService.GetDocumentByIdAsync(docId);
             await _documentService.DeleteDocumentAsync(docId);
+            
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (doc != null && userIdClaim != null && int.TryParse(userIdClaim, out var uId))
+            {
+                await _activityLogService.LogActivityAsync(id, docId, doc.Title, uId, "Deleted");
+            }
+            
             await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage(new { id = id });
         }

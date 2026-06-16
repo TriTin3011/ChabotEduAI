@@ -17,10 +17,16 @@ namespace DataAccessLayer
         public DbSet<Chapter> Chapters { get; set; }
         public DbSet<DocumentChunk> DocumentChunks { get; set; }
         public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+        public DbSet<DocumentActivityLog> DocumentActivityLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasPostgresExtension("vector");
+
+            modelBuilder.Entity<DocumentChunk>()
+                .HasIndex(c => c.Embedding)
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops");
 
             base.OnModelCreating(modelBuilder);
             
