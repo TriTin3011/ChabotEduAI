@@ -274,6 +274,59 @@
             background-color: #f5f5f5 !important;
             transform: translate(-1px, -1px);
         }
+
+        /* INLINE CITATION BADGE (NOTEBOOKLM STYLE) */
+        .citation-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--pink);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            border-radius: 3px;
+            width: 18px;
+            height: 18px;
+            margin-left: 4px;
+            cursor: pointer;
+            position: relative;
+            vertical-align: super;
+            box-shadow: 1px 1px 0px #000;
+            border: 1px solid #000;
+            transition: all 0.1s;
+        }
+
+        .citation-badge:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* CUSTOM TOOLTIP */
+        .citation-tooltip-content {
+            display: none;
+            position: absolute;
+            bottom: 130%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: 280px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            box-shadow: 3px 3px 0px #000;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            white-space: normal;
+            line-height: 1.4;
+            pointer-events: none;
+            text-align: left;
+        }
+
+        .citation-badge:hover .citation-tooltip-content {
+            display: block;
+        }
     </style>
 }
 
@@ -559,35 +612,45 @@
         }
         
         function buildCitationHtml(citations) {
-            if (!Array.isArray(citations) || citations.length === 0) return '';
-            const items = citations.map((c, idx) => {
-                const title = escapeHtml(c.documentTitle || 'Tài liệu');
-                const chapter = c.chapterTitle ? `<span style="display:inline-block; font-size:10px; font-weight:800; background:#e0e7ff; color:#3730a3; padding:2px 8px; border:2px solid #000; margin-top:6px; box-shadow:1px 1px 0 #000;"><i class="fa-solid fa-bookmark" style="margin-right:3px;"></i>${escapeHtml(c.chapterTitle)}</span>` : '';
-                const snippet = c.snippet ? `<div style="font-size:12px; color:#222; margin-top:10px; padding:8px 12px; border-left:4px solid var(--yellow); background:#fafafa; font-weight:600; line-height:1.5; border-right:2px solid #000; border-top:2px solid #000; border-bottom:2px solid #000;">"${escapeHtml(c.snippet)}"</div>` : '';
-                const chunk = c.chunkOrderIndex > 0 ? `Đoạn ${c.chunkOrderIndex}` : 'Tóm tắt';
-                return `<div class="citation-box" style="border:3px solid #000; box-shadow:4px 4px 0 #000; background:#fff; padding:15px; transition:all 0.2s ease; cursor:default;" 
-                             onmouseover="this.style.transform='translate(-2px, -2px)'; this.style.boxShadow='6px 6px 0 var(--pink)'; this.style.borderColor='var(--pink)';" 
-                             onmouseout="this.style.transform='none'; this.style.boxShadow='4px 4px 0 #000'; this.style.borderColor='#000';">
-                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                                <span style="font-size:11px; font-weight:900; border:2px solid #000; background:var(--green); color:#000; padding:3px 8px; box-shadow:1px 1px 0 #000; display:flex; align-items:center; gap:4px;">
-                                    <i class="fa-solid fa-check-double"></i> NGUỒN ${idx + 1}
+            // Không sử dụng khối trích dẫn khổng lồ ở dưới nữa, chỉ dùng Inline Citation.
+            return '';
+        }
+
+        function processInlineCitations(text, citations) {
+            if (!text) return '';
+            let formattedHtml = formatMarkdown(text);
+
+            if (!Array.isArray(citations) || citations.length === 0) return formattedHtml;
+
+            // Tìm các mẫu [1], [2] và thay thế bằng badge HTML
+            formattedHtml = formattedHtml.replace(/\[(\d+)\]/g, (match, p1) => {
+                const idx = parseInt(p1) - 1;
+                if (idx >= 0 && idx < citations.length) {
+                    const c = citations[idx];
+                    const snippet = escapeHtml(c.snippet || 'Không có trích đoạn');
+                    const fullContent = escapeHtml(c.fullContent || c.snippet || 'Không có trích đoạn');
+                    const title = escapeHtml(c.documentTitle || 'Tài liệu');
+                    return `<span class="citation-badge" data-title="${title}" data-fullcontent="${fullContent}" onclick="openFullCitationFromElement(this)">
+                                ${p1}
+                                <span class="citation-tooltip-content">
+                                    <strong style="color:var(--blue);display:block;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:2px;font-size:13px;">${title}</strong>
+                                    <span style="font-style:italic;">"${snippet}"</span>
                                 </span>
-                                <span style="font-size:14px; font-weight:900; color:var(--blue);">${title}</span>
-                                <span style="font-size:10px; color:#000; background:#eee; padding:3px 8px; border:2px solid #000; font-weight:800; box-shadow:1px 1px 0 #000;">${chunk}</span>
-                            </div>
-                            ${chapter}
-                            ${snippet}
-                        </div>`;
-            }).join('');
+                            </span>`;
+                }
+                return match;
+            });
             
-            return `<div style="margin-top:25px; border-top:3px dashed #ccc; padding-top:20px;">
-                        <div style="font-size:14px; font-weight:900; color:var(--black); text-transform:uppercase; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
-                            <i class="fa-solid fa-quote-left" style="color:var(--pink); font-size:18px;"></i> CÁC NGUỒN ĐƯỢC TRÍCH DẪN
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:15px;">
-                            ${items}
-                        </div>
-                    </div>`;
+            return formattedHtml;
+        }
+
+        function openFullCitationFromElement(el) {
+            const title = el.getAttribute('data-title');
+            const fullContent = el.getAttribute('data-fullcontent');
+            const modal = document.getElementById('previewModal');
+            document.getElementById('modalTitle').textContent = 'Trích dẫn: ' + title;
+            document.getElementById('modalContent').textContent = fullContent;
+            modal.style.display = 'flex';
         }
 
         function copyMessage(btn) {
@@ -663,7 +726,7 @@
 
             const body = isUser
                 ? `<p class="message-text" data-raw="${escapeHtml(text)}">${escapeHtml(text).replace(/\\n/g, '<br>')}</p>${actionBar}`
-                : `<div class="message-text" data-raw="${escapeHtml(text)}" style="font-weight:500;font-size:14px;line-height:1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations||[])}${actionBar}`;
+                : `<div class="message-text" data-raw="${escapeHtml(text)}" style="font-weight:500;font-size:14px;line-height:1.6;">${processInlineCitations(text, citations)}</div>${actionBar}`;
             div.innerHTML = `<div class="chat-avatar"><i class="fa-solid ${icon}"></i></div><div class="message-content"><div class="message-sender">${senderName}</div>${body}</div>`;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;

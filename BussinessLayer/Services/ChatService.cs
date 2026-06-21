@@ -115,8 +115,8 @@ namespace BussinessLayer.Services
                             OutOfQuota = true,
                             Remaining = remainingBefore,
                             Message = effectivePlan == "Free"
-                                ? $"Ban da dung het {limit} cau hoi mien phi trong thang nay. Nang cap goi de tiep tuc!"
-                                : $"Ban da dat gioi han {limit} cau hoi/thang cua goi {effectivePlan}."
+                                ? $"Bạn đã dùng hết {limit} câu hỏi miễn phí trong tháng này. Nâng cấp gói để tiếp tục!"
+                                : $"Bạn đã đạt giới hạn {limit} câu hỏi/tháng của gói {effectivePlan}."
                         };
                     }
                 }
@@ -140,12 +140,12 @@ namespace BussinessLayer.Services
                         contextText = string.Join(
                             "\n\n",
                             similarChunks.Select((chunk, index) =>
-                                $"Nguon {index + 1}:\n" +
-                                $"Tai lieu: {chunk.Document.Title}\n" +
-                                $"Mon: {chunk.Document.Subject?.Name ?? "Khong ro"}\n" +
-                                $"Chuong: {chunk.Document.Chapter?.Title ?? "Khong ro"}\n" +
-                                $"Doan: {chunk.OrderIndex}\n" +
-                                $"Noi dung: {chunk.Content}"));
+                                $"Nguồn {index + 1}:\n" +
+                                $"Tài liệu: {chunk.Document.Title}\n" +
+                                $"Môn: {chunk.Document.Subject?.Name ?? "Không rõ"}\n" +
+                                $"Chương: {chunk.Document.Chapter?.Title ?? "Không rõ"}\n" +
+                                $"Đoạn: {chunk.OrderIndex}\n" +
+                                $"Nội dung: {chunk.Content}"));
 
                         citations = similarChunks
                             .Select(chunk => new CitationDto
@@ -155,7 +155,8 @@ namespace BussinessLayer.Services
                                 SubjectName = chunk.Document.Subject?.Name,
                                 ChapterTitle = chunk.Document.Chapter?.Title,
                                 ChunkOrderIndex = chunk.OrderIndex,
-                                Snippet = BuildSnippet(chunk.Content)
+                                Snippet = BuildSnippet(chunk.Content),
+                                FullContent = StripMarkdown(chunk.Content ?? "")
                             })
                             .ToList();
                     }
@@ -165,13 +166,16 @@ namespace BussinessLayer.Services
                         foreach (var doc in docs)
                         {
                             var snippet = BuildSnippet(doc.Content);
-                            contextText += $"Tai lieu: {doc.Title}\nNoi dung: {snippet}\n\n";
+                            var fullCleaned = StripMarkdown(doc.Content ?? "");
+                            var fullContent = fullCleaned.Length > 3000 ? fullCleaned[..3000] + "...\n(Tài liệu quá dài, vui lòng xem bản đầy đủ)" : fullCleaned;
+                            contextText += $"Tài liệu: {doc.Title}\nNội dung: {snippet}\n\n";
                             citations.Add(new CitationDto
                             {
                                 DocumentId = doc.Id,
                                 DocumentTitle = doc.Title,
                                 ChunkOrderIndex = 0,
-                                Snippet = snippet
+                                Snippet = snippet,
+                                FullContent = fullContent
                             });
                         }
                     }
@@ -193,7 +197,7 @@ namespace BussinessLayer.Services
                         return new ChatResponseDto
                         {
                             Success = false,
-                            Message = "Toi khong tim thay doan tai lieu phu hop de tra loi cau hoi nay trong cac tai lieu da chon."
+                            Message = "Tôi không tìm thấy đoạn tài liệu phù hợp để trả lời câu hỏi này trong các tài liệu đã chọn."
                         };
                     }
                 }
@@ -206,7 +210,7 @@ namespace BussinessLayer.Services
                     return new ChatResponseDto
                     {
                         Success = false,
-                        Message = "AI khong tra ve noi dung hop le."
+                        Message = "AI không trả về nội dung hợp lệ."
                     };
                 }
 
@@ -216,7 +220,7 @@ namespace BussinessLayer.Services
                     return new ChatResponseDto
                     {
                         Success = false,
-                        Message = "Khong the tao hoac tim thay phien chat."
+                        Message = "Không thể tạo hoặc tìm thấy phiên chat."
                     };
                 }
 
@@ -269,7 +273,7 @@ namespace BussinessLayer.Services
                 return new ChatResponseDto
                 {
                     Success = false,
-                    Message = "Loi he thong: " + ex.Message
+                    Message = "Lỗi hệ thống: " + ex.Message
                 };
             }
         }
@@ -331,8 +335,68 @@ namespace BussinessLayer.Services
                 return string.Empty;
             }
 
-            var normalized = content.Replace("\r", " ").Replace("\n", " ").Trim();
+            var cleaned = StripMarkdown(content);
+            var normalized = cleaned.Replace("\r", " ").Replace("\n", " ").Trim();
+            // Loại bỏ các khoảng trắng thừa liên tiếp phát sinh sau khi làm sạch
+            normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s{2,}", " ").Trim();
             return normalized.Length > 220 ? normalized[..220] + "..." : normalized;
+        }
+
+        /// <summary>
+        /// Làm sạch các ký hiệu Markdown (in đậm, in nghiêng, tiêu đề, mã, liên kết...) 
+        /// để hiển thị text thuần túy trong tooltip trích dẫn.
+        /// </summary>
+        private static string StripMarkdown(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+            static string R(string input, string pattern, string replacement)
+                => System.Text.RegularExpressions.Regex.Replace(input, pattern, replacement);
+            static string RM(string input, string pattern, string replacement)
+                => System.Text.RegularExpressions.Regex.Replace(input, pattern, replacement,
+                   System.Text.RegularExpressions.RegexOptions.Multiline);
+
+            // Xóa các tiêu đề (## Heading, # Heading)
+            text = RM(text, @"^#{1,6}\s+", "");
+
+            // Xóa bold+italic kết hợp (***text*** hoặc ___text___)
+            text = R(text, @"\*{3}(.+?)\*{3}", "$1");
+            text = R(text, @"_{3}(.+?)_{3}", "$1");
+
+            // Xóa bold (**text** hoặc __text__)
+            text = R(text, @"\*{2}(.+?)\*{2}", "$1");
+            text = R(text, @"_{2}(.+?)_{2}", "$1");
+
+            // Xóa italic (*text* hoặc _text_)
+            text = R(text, @"\*(.+?)\*", "$1");
+            text = R(text, @"_(.+?)_", "$1");
+
+            // Xóa inline code (`code`)
+            text = R(text, @"`(.+?)`", "$1");
+
+            // Xóa code block (```...```)
+            text = R(text, @"```[\s\S]*?```", "");
+
+            // Xóa hình ảnh (![alt](url))
+            text = R(text, @"!\[.*?\]\(.*?\)", "");
+
+            // Đổi liên kết [text](url) → text
+            text = R(text, @"\[(.+?)\]\(.*?\)", "$1");
+
+            // Xóa dấu gạch ngang (--- hoặc ***)
+            text = RM(text, @"^[-*_]{3,}\s*$", "");
+
+            // Xóa đánh dấu trang (ví dụ: -----Trang 1------, --- Trang 1 ---)
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"-{2,}\s*Trang\s+\d+\s*-{2,}", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            // Xóa ký hiệu danh sách (- item, * item, 1. item)
+            text = RM(text, @"^[\s]*[-*+]\s+", "");
+            text = RM(text, @"^[\s]*\d+\.\s+", "");
+
+            // Xóa blockquote (> text)
+            text = RM(text, @"^>\s?", "");
+
+            return text;
         }
 
         private static string? SerializeCitations(List<CitationDto> citations)
@@ -374,7 +438,7 @@ namespace BussinessLayer.Services
                 .TakeLast(maxMessages)
                 .Select(m =>
                 {
-                    var roleLabel = m.Role == "user" ? "Nguoi dung" : "Tro ly AI";
+                    var roleLabel = m.Role == "user" ? "Người dùng" : "Trợ lý AI";
                     return $"{roleLabel}: {m.Text}";
                 })
                 .ToList();
@@ -394,45 +458,47 @@ namespace BussinessLayer.Services
         {
             var promptSections = new List<string>();
 
-            // Them thong tin he thong ve goi cuoc va so luot hoi con lai
+            // Thêm thông tin hệ thống về gói cước và số lượt hỏi còn lại
             if (remainingQueries != int.MaxValue)
             {
                 promptSections.Add(
-                    $"[THONG TIN HE THONG]\nNguoi dung dang su dung goi: {planName}.\nSo luot hoi con lai trong thang sau cau hoi nay: {remainingQueries} luot.\n(Neu nguoi dung hoi ve so luot con lai, hoac lien quan den gioi han, hay dung thong tin nay de tra loi hoac nhac nho. Khong can nhac den neu khong lien quan).");
+                    $"[THÔNG TIN HỆ THỐNG]\nNgười dùng đang sử dụng gói: {planName}.\nSố lượt hỏi còn lại trong tháng sau câu hỏi này: {remainingQueries} lượt.\n(Nếu người dùng hỏi về số lượt còn lại, hoặc liên quan đến giới hạn, hãy dùng thông tin này để trả lời hoặc nhắc nhở. Không cần nhắc đến nếu không liên quan).");
             }
             else
             {
                 promptSections.Add(
-                    $"[THONG TIN HE THONG]\nNguoi dung dang su dung goi: {planName} (Khong gioi han so luot hoi).");
+                    $"[THÔNG TIN HỆ THỐNG]\nNgười dùng đang sử dụng gói: {planName} (Không giới hạn số lượt hỏi).");
             }
 
             if (!string.IsNullOrWhiteSpace(conversationHistory))
             {
                 promptSections.Add(
-                    "Lich su hoi thoai gan day:\n" +
+                    "Lịch sử hội thoại gần đây:\n" +
                     conversationHistory +
-                    "\n\nHay giu dung ngu canh hoi thoai khi tra loi cau hoi moi.");
+                    "\n\nHãy giữ đúng ngữ cảnh hội thoại khi trả lời câu hỏi mới.");
             }
 
             if (!string.IsNullOrWhiteSpace(contextText))
             {
+                var citationInstruction = "\n\nQUAN TRỌNG: Bắt buộc phải trích dẫn nguồn cho các câu văn có sử dụng thông tin từ tài liệu. Khi bạn viết một câu lấy thông tin từ 'Nguồn X', hãy BẮT BUỘC chèn [X] vào ngay cuối câu đó. Ví dụ: 'Trái đất hình tròn [1][2].' KHÔNG liệt kê lại danh sách nguồn ở cuối câu trả lời, chỉ cần đánh dấu [X] trong đoạn văn.";
+
                 if (restrictToDocs)
                 {
                     promptSections.Add(
-                        "Tai lieu lien quan:\n" +
+                        "Tài liệu liên quan:\n" +
                         contextText +
-                        "\n\nChi su dung thong tin trong tai lieu tren de tra loi. Neu tai lieu khong du thong tin, hay noi ro rang.");
+                        "\n\nChỉ sử dụng thông tin trong tài liệu trên để trả lời. Nếu tài liệu không đủ thông tin, hãy nói rõ ràng." + citationInstruction);
                 }
                 else
                 {
                     promptSections.Add(
-                        "Tai lieu lien quan (co the tham khao):\n" +
+                        "Tài liệu liên quan (có thể tham khảo):\n" +
                         contextText +
-                        "\n\nHay uu tien su dung thong tin trong tai lieu nay. Neu tai lieu khong du thong tin, ban co the su dung kien thuc san co cua ban de tra loi.");
+                        "\n\nHãy ưu tiên sử dụng thông tin trong tài liệu này. Nếu tài liệu không đủ thông tin, bạn có thể sử dụng kiến thức sẵn có của bạn để trả lời." + citationInstruction);
                 }
             }
 
-            promptSections.Add($"Cau hoi hien tai: {message}");
+            promptSections.Add($"Câu hỏi hiện tại: {message}");
             return string.Join("\n\n", promptSections);
         }
 
@@ -445,9 +511,9 @@ namespace BussinessLayer.Services
 
             var promptSections = new List<string>
             {
-                "Ban la mot he thong cham diem muc do lien quan cua tai lieu. Nhiem vu cua ban la chon ra cac doan tai lieu phu hop nhat voi cau hoi.",
-                $"Cau hoi: {query}",
-                "Danh sach cac doan tai lieu:"
+                "Bạn là một hệ thống chấm điểm mức độ liên quan của tài liệu. Nhiệm vụ của bạn là chọn ra các đoạn tài liệu phù hợp nhất với câu hỏi.",
+                $"Câu hỏi: {query}",
+                "Danh sách các đoạn tài liệu:"
             };
 
             for (int i = 0; i < chunks.Count; i++)
@@ -455,18 +521,18 @@ namespace BussinessLayer.Services
                 promptSections.Add($"[{i}] {chunks[i].Content}");
             }
 
-            promptSections.Add($@"Vui long tra ve MANG JSON gom toi da {topN} chi so (index) cua cac doan tai lieu lien quan nhat den cau hoi, sap xep theo do muc do phu hop giam dan. 
-Vi du: [3, 0, 1, 5, 2]
-CHI TRA VE MANG JSON, KHONG GIAI THICH HOAC THEM BAT KY VAN BAN NAO KHAC.");
+            promptSections.Add($@"Vui lòng trả về MẢNG JSON gồm tối đa {topN} chỉ số (index) của các đoạn tài liệu liên quan nhất đến câu hỏi, sắp xếp theo mức độ phù hợp giảm dần. 
+Ví dụ: [3, 0, 1, 5, 2]
+CHỈ TRẢ VỀ MẢNG JSON, KHÔNG GIẢI THÍCH HOẶC THÊM BẤT KỲ VĂN BẢN NÀO KHÁC.");
 
             var prompt = string.Join("\n\n", promptSections);
             
             try
             {
-                // Su dung gemini-1.5-flash cho nhiem vu re-rank de dam bao toc do
+                // Sử dụng gemini-1.5-flash cho nhiệm vụ re-rank để đảm bảo tốc độ
                 var reply = await _geminiService.GenerateAnswerAsync(prompt, "gemini-1.5-flash");
                 
-                // Thu trich xuat JSON array tu phan hoi
+                // Thử trích xuất JSON array từ phản hồi
                 var jsonStart = reply.IndexOf('[');
                 var jsonEnd = reply.LastIndexOf(']');
                 if (jsonStart >= 0 && jsonEnd > jsonStart)
@@ -486,7 +552,7 @@ CHI TRA VE MANG JSON, KHONG GIAI THICH HOAC THEM BAT KY VAN BAN NAO KHAC.");
                             }
                         }
                         
-                        // Neu thieu so luong thi bo sung tu ban dau
+                        // Nếu thiếu số lượng thì bổ sung từ ban đầu
                         if (reranked.Count < topN)
                         {
                             var remaining = chunks.Where((c, i) => !addedIndices.Contains(i)).Take(topN - reranked.Count);
@@ -498,7 +564,7 @@ CHI TRA VE MANG JSON, KHONG GIAI THICH HOAC THEM BAT KY VAN BAN NAO KHAC.");
             }
             catch
             {
-                // Fallback: neu loi thi tra ve topN ban dau
+                // Fallback: nếu lỗi thì trả về topN ban đầu
             }
 
             return chunks.Take(topN).ToList();

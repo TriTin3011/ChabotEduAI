@@ -54,5 +54,6 @@ namespace BussinessLayer.DTOs
         public string? ChapterTitle { get; set; }
         public int ChunkOrderIndex { get; set; }
         public string Snippet { get; set; } = string.Empty;
+        public string FullContent { get; set; } = string.Empty;
     }
 }

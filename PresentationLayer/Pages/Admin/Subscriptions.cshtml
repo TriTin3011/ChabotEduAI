@@ -105,8 +105,9 @@
                         _         => "plan-free"
                     };
                     var limitLabel = sub.MonthlyLimit == int.MaxValue ? "∞" : sub.MonthlyLimit.ToString();
-                    var pct = sub.MonthlyLimit == int.MaxValue ? 0.0 : (sub.MonthlyLimit == 0 ? 100.0 : Math.Min(100.0, sub.MonthlyQuestionCount * 100.0 / sub.MonthlyLimit));
-                    var barColor = pct >= 90 ? "var(--pink)" : pct >= 60 ? "#f59e0b" : "var(--green)";
+                    var remaining = sub.MonthlyLimit == int.MaxValue ? int.MaxValue : Math.Max(0, sub.MonthlyLimit - sub.MonthlyQuestionCount);
+                    var pctRemaining = sub.MonthlyLimit == int.MaxValue ? 100.0 : (sub.MonthlyLimit == 0 ? 0.0 : Math.Min(100.0, remaining * 100.0 / sub.MonthlyLimit));
+                    var barColor = pctRemaining <= 10 ? "var(--pink)" : pctRemaining <= 40 ? "#f59e0b" : "var(--green)";
 
                     <tr style="border-bottom:1px dashed #ccc;">
                         <td style="padding:10px; font-weight:800;">@sub.Username</td>
@@ -122,12 +123,12 @@
                         <td style="padding:10px; text-align:center; font-weight:700; font-size:13px;">@FmtDate(sub.SubscriptionExpiry)</td>
                         <td style="padding:10px; text-align:center; min-width:120px;">
                             <div style="font-size:12px; font-weight:800; margin-bottom:4px;">
-                                @sub.MonthlyQuestionCount / @limitLabel
+                                @(sub.MonthlyLimit == int.MaxValue ? "Không giới hạn" : $"Còn {remaining} / {limitLabel}")
                             </div>
                             @if(sub.MonthlyLimit != int.MaxValue)
                             {
                                 <div style="height:8px; background:#e5e7eb; border:1px solid #000; overflow:hidden;">
-                                    <div style="height:100%; width:@(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%; background:@barColor;"></div>
+                                    <div style="height:100%; width:@(pctRemaining.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%; background:@barColor;"></div>
                                 </div>
                             }
                             else
@@ -143,12 +144,12 @@
                                         onclick="openSetPlanModal(@sub.UserId, '@sub.Username', '@sub.SubscriptionPlan', '@(sub.SubscriptionExpiry?.ToString("yyyy-MM-dd") ?? "")')">
                                     <i class="fa-solid fa-pen"></i> SỬA GÓI
                                 </button>
-                                <!-- Reset lượt -->
+                                <!-- Khôi phục lượt -->
                                 <form method="post" asp-page-handler="ResetQuota" style="display:inline;">
                                     <input type="hidden" name="userId" value="@sub.UserId" />
                                     <button type="submit" class="brutal-btn"
                                             style="background:var(--yellow); color:var(--black); border:2px solid var(--black); padding:5px 10px; font-weight:800; font-size:12px; box-shadow:2px 2px 0 var(--black);"
-                                            onclick="return confirm('Reset lượt hỏi của @sub.Username về 0?')">
+                                            onclick="return confirm('Khôi phục lại toàn bộ lượt hỏi cho @sub.Username?')">
                                         <i class="fa-solid fa-rotate-left"></i> RESET
                                     </button>
                                 </form>

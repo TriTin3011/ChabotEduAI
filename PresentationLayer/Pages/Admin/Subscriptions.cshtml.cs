@@ -52,7 +52,7 @@ namespace PresentationLayer.Pages.Admin
         public async Task<IActionResult> OnPostResetQuotaAsync(int userId)
         {
             await _subscriptionService.AdminResetQuotaAsync(userId);
-            TempData["SuccessMessage"] = "Đã reset lượt hỏi!";
+            TempData["SuccessMessage"] = "Đã khôi phục toàn bộ lượt hỏi!";
             return RedirectToPage();
         }
 
