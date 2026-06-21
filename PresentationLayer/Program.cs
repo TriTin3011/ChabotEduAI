@@ -68,7 +68,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
-app.MapHub<PresentationLayer.Hubs.CourseHub>("/courseHub");
+app.MapHub<PresentationLayer.SignalR.SignalRHub>("/courseHub");
 
 // Migrate DB automatically if you want, or let user do it manually. We will let user do it manually.
 

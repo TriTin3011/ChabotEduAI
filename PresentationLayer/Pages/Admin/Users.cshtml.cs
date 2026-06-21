@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BussinessLayer.DTOs;
 using BussinessLayer.Services;
+using PresentationLayer.ViewModels.Admin;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -20,16 +21,8 @@ namespace PresentationLayer.Pages.Admin
 
         public IEnumerable<UserDto> Users { get; set; } = new List<UserDto>();
 
-        [BindProperty] public string NewUsername { get; set; } = string.Empty;
-        [BindProperty] public string NewPassword { get; set; } = string.Empty;
-        [BindProperty] public string NewRole { get; set; } = "Student";
-        [BindProperty] public string? NewEmail { get; set; }
-
-        [BindProperty] public int UpdateId { get; set; }
-        [BindProperty] public string UpdateUsername { get; set; } = string.Empty;
-        [BindProperty] public string UpdateRole { get; set; } = string.Empty;
-        [BindProperty] public string? UpdateEmail { get; set; }
-        [BindProperty] public string? UpdatePassword { get; set; }
+        [BindProperty] public UserCreateViewModel CreateModel { get; set; } = new UserCreateViewModel();
+        [BindProperty] public UserUpdateViewModel UpdateModel { get; set; } = new UserUpdateViewModel();
 
         public async Task OnGetAsync()
         {
@@ -38,17 +31,17 @@ namespace PresentationLayer.Pages.Admin
 
         public async Task<IActionResult> OnPostAddUserAsync()
         {
-            if (!string.IsNullOrWhiteSpace(NewUsername) && !string.IsNullOrWhiteSpace(NewPassword))
+            if (!string.IsNullOrWhiteSpace(CreateModel.Username) && !string.IsNullOrWhiteSpace(CreateModel.Password))
             {
-                var created = await _userService.CreateUserAsync(NewUsername, NewPassword, NewRole, NewEmail);
+                var created = await _userService.CreateUserAsync(CreateModel.Username, CreateModel.Password, CreateModel.Role, CreateModel.Email);
 
                 // Gửi email thông tin tài khoản nếu có email
-                if (created && !string.IsNullOrWhiteSpace(NewEmail))
+                if (created && !string.IsNullOrWhiteSpace(CreateModel.Email))
                 {
                     try
                     {
-                        await _emailService.SendAccountCreatedEmailAsync(NewEmail, NewUsername, NewPassword, NewRole);
-                        TempData["SuccessMessage"] = $"Tạo tài khoản thành công! Đã gửi thông tin đến {NewEmail}.";
+                        await _emailService.SendAccountCreatedEmailAsync(CreateModel.Email, CreateModel.Username, CreateModel.Password, CreateModel.Role);
+                        TempData["SuccessMessage"] = $"Tạo tài khoản thành công! Đã gửi thông tin đến {CreateModel.Email}.";
                     }
                     catch
                     {
@@ -69,9 +62,9 @@ namespace PresentationLayer.Pages.Admin
 
         public async Task<IActionResult> OnPostUpdateUserAsync()
         {
-            if (UpdateId > 0 && !string.IsNullOrWhiteSpace(UpdateUsername))
+            if (UpdateModel.Id > 0 && !string.IsNullOrWhiteSpace(UpdateModel.Username))
             {
-                await _userService.UpdateUserAsync(UpdateId, UpdateUsername, UpdateRole, UpdateEmail, UpdatePassword);
+                await _userService.UpdateUserAsync(UpdateModel.Id, UpdateModel.Username, UpdateModel.Role, UpdateModel.Email, UpdateModel.Password);
             }
             return RedirectToPage();
         }

@@ -123,7 +123,7 @@ namespace BussinessLayer.Services
                     var similarChunks = await _documentRepository.SearchSimilarChunksAsync(
                         new Vector(questionEmbedding),
                         request.SelectedDocIds,
-                        topK: 20); // Top-K Retrieval: Tang so luong len 20
+                        topK: 20); // Top-K Retrieval
 
                     if (similarChunks.Any())
                     {

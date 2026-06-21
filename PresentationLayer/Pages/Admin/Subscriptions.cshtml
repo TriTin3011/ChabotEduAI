@@ -187,10 +187,10 @@
         <h2 style="font-weight:900; margin-bottom:20px; color:var(--blue);">CẬP NHẬT GÓI ĐĂNG KÝ</h2>
         <p id="setPlanUserLabel" style="font-weight:800; font-size:13px; margin-bottom:16px; color:#555;"></p>
         <form method="post" asp-page-handler="SetPlan">
-            <input type="hidden" id="setPlanUserId" asp-for="SetPlanUserId" />
+            <input type="hidden" id="setPlanUserId" asp-for="UpdateModel.UserId" />
             <div class="form-group">
                 <label>Gói</label>
-                <select id="setPlanValue" asp-for="SetPlanValue" onchange="toggleExpiryField()">
+                <select id="setPlanValue" asp-for="UpdateModel.PlanValue" onchange="toggleExpiryField()">
                     <option value="Free">Free (Miễn phí)</option>
                     <option value="Basic">Basic (50.000đ/tháng)</option>
                     <option value="Premium">Premium (150.000đ/tháng)</option>
@@ -198,7 +198,7 @@
             </div>
             <div class="form-group" id="expiryGroup">
                 <label>Ngày hết hạn</label>
-                <input type="date" id="setPlanExpiry" asp-for="SetPlanExpiry" />
+                <input type="date" id="setPlanExpiry" asp-for="UpdateModel.Expiry" />
                 <span style="font-size:11px; color:#888; font-weight:700;">Để trống = tự động +1 tháng từ hôm nay</span>
             </div>
             <button type="submit" class="brutal-btn"

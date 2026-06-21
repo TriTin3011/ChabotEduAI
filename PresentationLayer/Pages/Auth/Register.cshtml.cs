@@ -3,6 +3,7 @@ using BussinessLayer.DTOs;
 using BussinessLayer.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.ViewModels.Auth;
 
 namespace PresentationLayer.Pages.Auth
 {
@@ -16,7 +17,7 @@ namespace PresentationLayer.Pages.Auth
         }
 
         [BindProperty]
-        public RegisterDto Input { get; set; } = new RegisterDto();
+        public RegisterViewModel Input { get; set; } = new RegisterViewModel();
 
         public void OnGet()
         {
@@ -34,7 +35,14 @@ namespace PresentationLayer.Pages.Auth
                 return Page();
             }
 
-            var (success, error) = await _authService.RegisterAsync(Input);
+            var dto = new RegisterDto
+            {
+                Username = Input.Username,
+                Password = Input.Password,
+                Email = Input.Email
+            };
+
+            var (success, error) = await _authService.RegisterAsync(dto);
 
             if (!success)
             {

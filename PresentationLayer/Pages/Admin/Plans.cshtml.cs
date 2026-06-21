@@ -6,6 +6,7 @@ using BussinessLayer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.ViewModels.Admin;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -22,21 +23,10 @@ namespace PresentationLayer.Pages.Admin
         public IEnumerable<SubscriptionPlanDto> Plans { get; set; } = new List<SubscriptionPlanDto>();
 
         // ── Create ──
-        [BindProperty, Required] public string NewName        { get; set; } = string.Empty;
-        [BindProperty]           public string NewDescription { get; set; } = string.Empty;
-        [BindProperty]           public decimal NewPrice      { get; set; }
-        [BindProperty]           public int NewLimit          { get; set; } = 5;
-        [BindProperty]           public int NewSortOrder      { get; set; } = 0;
-        [BindProperty]           public bool NewIsActive      { get; set; } = true;
+        [BindProperty] public PlanCreateViewModel CreateModel { get; set; } = new PlanCreateViewModel();
 
         // ── Update ──
-        [BindProperty] public int    EditId          { get; set; }
-        [BindProperty] public string EditName        { get; set; } = string.Empty;
-        [BindProperty] public string EditDescription { get; set; } = string.Empty;
-        [BindProperty] public decimal EditPrice      { get; set; }
-        [BindProperty] public int    EditLimit       { get; set; }
-        [BindProperty] public int    EditSortOrder   { get; set; }
-        [BindProperty] public bool   EditIsActive    { get; set; }
+        [BindProperty] public PlanUpdateViewModel UpdateModel { get; set; } = new PlanUpdateViewModel();
 
         public async Task OnGetAsync()
         {
@@ -47,12 +37,12 @@ namespace PresentationLayer.Pages.Admin
         {
             var (ok, err) = await _planService.CreateAsync(new SubscriptionPlanDto
             {
-                Name                 = NewName,
-                Description          = NewDescription,
-                Price                = NewPrice,
-                MonthlyQuestionLimit = NewLimit,
-                SortOrder            = NewSortOrder,
-                IsActive             = NewIsActive
+                Name                 = CreateModel.Name,
+                Description          = CreateModel.Description,
+                Price                = CreateModel.Price,
+                MonthlyQuestionLimit = CreateModel.Limit,
+                SortOrder            = CreateModel.SortOrder,
+                IsActive             = CreateModel.IsActive
             });
 
             TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok ? "Thêm gói thành công!" : err;
@@ -63,13 +53,13 @@ namespace PresentationLayer.Pages.Admin
         {
             var (ok, err) = await _planService.UpdateAsync(new SubscriptionPlanDto
             {
-                Id                   = EditId,
-                Name                 = EditName,
-                Description          = EditDescription,
-                Price                = EditPrice,
-                MonthlyQuestionLimit = EditLimit,
-                SortOrder            = EditSortOrder,
-                IsActive             = EditIsActive
+                Id                   = UpdateModel.Id,
+                Name                 = UpdateModel.Name,
+                Description          = UpdateModel.Description,
+                Price                = UpdateModel.Price,
+                MonthlyQuestionLimit = UpdateModel.Limit,
+                SortOrder            = UpdateModel.SortOrder,
+                IsActive             = UpdateModel.IsActive
             });
 
             TempData[ok ? "SuccessMessage" : "ErrorMessage"] = ok ? "Cập nhật gói thành công!" : err;

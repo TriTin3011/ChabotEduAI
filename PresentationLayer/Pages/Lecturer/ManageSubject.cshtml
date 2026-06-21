@@ -243,11 +243,11 @@
             <h2 id="chapterModalTitle" style="font-weight: 900; color: var(--pink); margin-bottom: 20px; text-transform: uppercase;">THÊM CHƯƠNG MỚI</h2>
 
             <form id="chapterForm" method="post" asp-page-handler="AddChapter" asp-route-id="@Model.Subject.Id">
-                <input type="hidden" id="updateChapterId" asp-for="UpdateChapterId" value="0" />
+                <input type="hidden" id="updateChapterId" asp-for="UpdateChapterModel.Id" value="0" />
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Tên chương</label>
-                    <input type="text" id="chapterTitleInput" name="NewChapterTitle" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 16px;" placeholder="Ví dụ: Chương 1: Mở đầu" />
+                    <input type="text" id="chapterTitleInput" name="CreateChapterModel.Title" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 16px;" placeholder="Ví dụ: Chương 1: Mở đầu" />
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -263,15 +263,17 @@
         <div style="background: var(--white); border: 4px solid var(--black); padding: 30px; box-shadow: 8px 8px 0px var(--black); width: 450px; max-width: 90%;">
             <h2 style="font-weight: 900; color: var(--blue); margin-bottom: 20px; text-transform: uppercase;">TẢI LÊN TÀI LIỆU</h2>
 
-            <form method="post" asp-page-handler="UploadFile" asp-route-id="@Model.Subject.Id" enctype="multipart/form-data">
+            <form id="uploadForm" onsubmit="handleUpload(event, @Model.Subject.Id)">
+                <!-- Fake inputs mapped to ASP names for FormData to pick up automatically -->
+                @Html.AntiForgeryToken()
                 <div style="margin-bottom: 15px;">
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Tên tài liệu</label>
-                    <input type="text" asp-for="UploadTitle" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px;" placeholder="Tên tài liệu hiển thị" />
+                    <input type="text" name="UploadDocumentModel.Title" required style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px;" placeholder="Tên tài liệu hiển thị" />
                 </div>
 
                 <div style="margin-bottom: 15px;">
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chương (Tùy chọn)</label>
-                    <select asp-for="UploadChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
+                    <select name="UploadDocumentModel.ChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
                         <option value="">-- Tài liệu chung (Không thuộc chương nào) --</option>
                         @foreach(var c in Model.Subject.Chapters.OrderBy(x => x.OrderIndex))
                         {
@@ -282,13 +284,22 @@
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chọn File</label>
-                    <input type="file" asp-for="UploadFile" required accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; background: white; font-size: 14px;" />
+                    <input type="file" name="UploadDocumentModel.File" required accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; background: white; font-size: 14px;" />
                     <p style="font-size: 11px; color: #888; margin-top: 5px; font-weight: 600;">Hỗ trợ: PDF, DOCX, PPTX, TXT, MD, CSV</p>
+                </div>
+                
+                <div id="uploadProgressContainer" style="display: none; margin-bottom: 20px;">
+                    <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Tiến trình xử lý:</label>
+                    <div style="width: 100%; background-color: #eee; border: 3px solid var(--black); height: 25px; position: relative;">
+                        <div id="uploadProgressBar" style="width: 0%; height: 100%; background-color: var(--green); transition: width 0.3s ease;"></div>
+                        <div id="uploadProgressText" style="position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-weight: 900; font-size: 12px; line-height: 19px; mix-blend-mode: difference; color: white;">0%</div>
+                    </div>
+                    <p style="font-size: 11px; color: #888; margin-top: 5px; font-weight: 600; text-align: center;">Đang trích xuất và băm dữ liệu ... Vui lòng đợi.</p>
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="closeModals()" class="brutal-btn" style="background: #ccc; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">HỦY</button>
-                    <button type="submit" class="brutal-btn" style="background: var(--blue); color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">TẢI LÊN</button>
+                    <button type="submit" id="uploadSubmitBtn" class="brutal-btn" style="background: var(--blue); color: white; border: 3px solid var(--black); padding: 10px 20px; font-weight: 900;">TẢI LÊN</button>
                 </div>
             </form>
         </div>
@@ -307,11 +318,11 @@
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 10px;">Xử lý tài liệu trong chương:</label>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
-                            <input type="radio" name="DeleteChapterOption" value="keep" checked style="accent-color: var(--blue); transform: scale(1.2);" />
+                            <input type="radio" name="DeleteChapterModel.Option" value="keep" checked style="accent-color: var(--blue); transform: scale(1.2);" />
                             Đưa các tài liệu về mục "Tài liệu chung"
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
-                            <input type="radio" name="DeleteChapterOption" value="delete" style="accent-color: var(--blue); transform: scale(1.2);" />
+                            <input type="radio" name="DeleteChapterModel.Option" value="delete" style="accent-color: var(--blue); transform: scale(1.2);" />
                             Xóa luôn các tài liệu
                         </label>
                     </div>
@@ -332,11 +343,11 @@
             <p style="font-weight: 700; color: #555; margin-bottom: 15px;">Đang chuyển tài liệu: <strong id="moveDocTitle" style="color: var(--black);"></strong></p>
 
             <form method="post" asp-page-handler="MoveDocument" asp-route-id="@Model.Subject.Id">
-                <input type="hidden" id="moveDocumentId" name="MoveDocumentId" value="0" />
+                <input type="hidden" id="moveDocumentId" name="MoveDocumentModel.DocumentId" value="0" />
                 
                 <div style="margin-bottom: 20px;">
                     <label style="font-weight: 800; font-size: 14px; display: block; margin-bottom: 5px;">Chọn nơi chuyển đến</label>
-                    <select name="MoveToChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
+                    <select name="MoveDocumentModel.ToChapterId" style="width: 100%; border: 3px solid var(--black); padding: 10px; font-weight: 700; outline: none; font-size: 14px; background: white;">
                         <option value="">-- Tài liệu chung (Không thuộc chương nào) --</option>
                         @foreach(var c in Model.Subject.Chapters.OrderBy(x => x.OrderIndex))
                         {
@@ -352,7 +363,9 @@
             </form>
         </div>
     </div>
+}
 
+@section Scripts {
     <script>
         function openChapterModal(id, title) {
             document.getElementById('chapterModal').style.display = 'flex';
@@ -360,21 +373,27 @@
             if(id > 0) {
                 document.getElementById('chapterModalTitle').innerText = "CẬP NHẬT CHƯƠNG";
                 document.getElementById('chapterForm').action = "?handler=UpdateChapter";
-                document.getElementById('chapterTitleInput').name = "UpdateChapterTitle";
+                document.getElementById('chapterTitleInput').name = "UpdateChapterModel.Title";
                 document.getElementById('chapterTitleInput').value = title;
             } else {
                 document.getElementById('chapterModalTitle').innerText = "THÊM CHƯƠNG MỚI";
                 document.getElementById('chapterForm').action = "?handler=AddChapter";
-                document.getElementById('chapterTitleInput').name = "NewChapterTitle";
+                document.getElementById('chapterTitleInput').name = "CreateChapterModel.Title";
                 document.getElementById('chapterTitleInput').value = "";
             }
         }
 
-        function openUploadModal() {
+        function openUploadModal(chapterId) {
             document.getElementById('uploadModal').style.display = 'flex';
+            const chapterSelect = document.querySelector('select[name="UploadDocumentModel.ChapterId"]');
+            if (chapterId) {
+                chapterSelect.value = chapterId;
+            } else {
+                chapterSelect.value = "";
+            }
         }
 
-        function openDeleteChapterModal(id, title, docCount) {
+        function confirmDeleteChapter(id, title, docCount) {
             document.getElementById('deleteChapterModal').style.display = 'flex';
             document.getElementById('deleteChapterIdInput').value = id;
             
@@ -414,6 +433,57 @@
                     document.getElementById('manage-subject-container').innerHTML = newContent;
                 });
         });
+
+        connection.on("UploadProgress", function (percent) {
+            const progressBar = document.getElementById('uploadProgressBar');
+            const progressText = document.getElementById('uploadProgressText');
+            if (progressBar && progressText) {
+                progressBar.style.width = percent + '%';
+                progressText.innerText = percent + '%';
+            }
+        });
+
+        async function handleUpload(event, subjectId) {
+            event.preventDefault();
+            const form = document.getElementById('uploadForm');
+            const submitBtn = document.getElementById('uploadSubmitBtn');
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const progressText = document.getElementById('uploadProgressText');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'ĐANG XỬ LÝ...';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.innerText = '0%';
+
+            // Đảm bảo connection đã được init trước khi gửi form (tránh crash)
+            const formData = new FormData(form);
+            if (typeof connection !== 'undefined' && connection.connectionId) {
+                formData.append("UploadDocumentModel.ConnectionId", connection.connectionId);
+            }
+
+            try {
+                const response = await fetch(`?handler=UploadFile&id=${subjectId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Đã xảy ra lỗi trong quá trình tải lên hoặc xử lý.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'TẢI LÊN';
+                    progressContainer.style.display = 'none';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi mạng hoặc server không phản hồi.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'TẢI LÊN';
+                progressContainer.style.display = 'none';
+            }
+        }
 
         connection.start().catch(function (err) {
             return console.error(err.toString());

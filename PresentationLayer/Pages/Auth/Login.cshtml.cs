@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.ViewModels.Auth;
 
 namespace PresentationLayer.Pages.Auth
 {
@@ -20,10 +21,7 @@ namespace PresentationLayer.Pages.Auth
         }
 
         [BindProperty]
-        public string Username { get; set; } = string.Empty;
-
-        [BindProperty]
-        public string Password { get; set; } = string.Empty;
+        public LoginViewModel Input { get; set; } = new LoginViewModel();
 
         [BindProperty(SupportsGet = true)]
         public string? ReturnUrl { get; set; }
@@ -43,7 +41,7 @@ namespace PresentationLayer.Pages.Auth
                 return Page();
             }
 
-            var loginDto = new LoginDto { Username = Username, Password = Password };
+            var loginDto = new LoginDto { Username = Input.Username, Password = Input.Password };
             var user = await _authService.AuthenticateAsync(loginDto);
 
             if (user != null)

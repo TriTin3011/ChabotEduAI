@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using BussinessLayer.Services;
-using System.ComponentModel.DataAnnotations;
+using PresentationLayer.ViewModels.Admin;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -21,15 +21,7 @@ namespace PresentationLayer.Pages.Admin
         }
 
         [BindProperty]
-        public string TargetAudience { get; set; } = "All";
-
-        [BindProperty]
-        [Required(ErrorMessage = "Vui lòng nhập tiêu đề email")]
-        public string Subject { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Vui lòng nhập nội dung email")]
-        public string EmailContent { get; set; } = string.Empty;
+        public NotificationSendViewModel SendModel { get; set; } = new NotificationSendViewModel();
 
         public void OnGet()
         {
@@ -44,7 +36,7 @@ namespace PresentationLayer.Pages.Admin
             }
 
             var allUsers = await _userService.GetAllUsersAsync();
-            var targetUsers = TargetAudience switch
+            var targetUsers = SendModel.TargetAudience switch
             {
                 "Students" => allUsers.Where(u => u.Role == "Student"),
                 "Lecturers" => allUsers.Where(u => u.Role == "Lecturer"),
@@ -63,7 +55,7 @@ namespace PresentationLayer.Pages.Admin
                 return RedirectToPage();
             }
 
-            await _emailService.SendBroadcastEmailAsync(validEmails, Subject, EmailContent);
+            await _emailService.SendBroadcastEmailAsync(validEmails, SendModel.Subject, SendModel.EmailContent);
 
             TempData["SuccessMessage"] = $"Đã gửi thông báo thành công đến {validEmails.Count} email.";
             return RedirectToPage();

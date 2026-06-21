@@ -351,21 +351,21 @@
                 <div asp-validation-summary="ModelOnly" class="validation-summary" style="@(ViewData.ModelState.IsValid ? "display:none;" : "")"></div>
                 
                 <div class="input-group">
-                    <label asp-for="Username">Username</label>
+                    <label asp-for="Input.Username">Username</label>
                     <div class="input-wrapper">
                         <i class="fa-regular fa-envelope left-icon"></i>
-                        <input asp-for="Username" placeholder="Nhập username của bạn" required autocomplete="username">
+                        <input id="Username" asp-for="Input.Username" placeholder="Nhập username của bạn" required autocomplete="username">
                     </div>
-                    <span asp-validation-for="Username" class="text-danger"></span>
+                    <span asp-validation-for="Input.Username" class="text-danger"></span>
                 </div>
 
                 <div class="input-group">
-                    <label asp-for="Password">Mật khẩu</label>
+                    <label asp-for="Input.Password">Mật khẩu</label>
                     <div class="input-wrapper">
                         <i class="fa-solid fa-lock left-icon"></i>
-                        <input asp-for="Password" type="password" placeholder="••••••••" required autocomplete="current-password">
+                        <input id="Password" asp-for="Input.Password" type="password" placeholder="••••••••" required autocomplete="current-password">
                     </div>
-                    <span asp-validation-for="Password" class="text-danger"></span>
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
 
                 <button type="submit" class="btn-brutal btn-login">ĐĂNG NHẬP</button>

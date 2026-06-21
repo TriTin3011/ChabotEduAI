@@ -113,7 +113,7 @@
             <a asp-page="/Subscription/Index" class="nav-item @(ViewBag.ActiveMenu == "Subscription" ? "active" : "")"><i class="fa-solid fa-crown"></i> GÓI HỘI VIÊN</a>
         }
         
-        <div class="user-profile">
+        <a asp-page="/Auth/Profile" class="user-profile" style="text-decoration: none; cursor: pointer; transition: 0.1s;">
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <div class="avatar-box">
@@ -124,7 +124,7 @@
                     <div class="role">@User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value</div>
                 </div>
             }
-        </div>
+        </a>
         <a asp-page="/Auth/Logout" class="nav-item" style="border:dashed 2px var(--black);">Đăng xuất</a>      
     </div>
 

@@ -560,14 +560,80 @@
         
         function buildCitationHtml(citations) {
             if (!Array.isArray(citations) || citations.length === 0) return '';
-            const items = citations.map(c => {
-                const title = escapeHtml(c.documentTitle||'Tài liệu');
-                const chapter = c.chapterTitle ? `<span style="color:#555;">${escapeHtml(c.chapterTitle)}</span>` : '';
-                const snippet = c.snippet ? `<div style="font-size:11px;color:#444;">${escapeHtml(c.snippet)}</div>` : '';
+            const items = citations.map((c, idx) => {
+                const title = escapeHtml(c.documentTitle || 'Tài liệu');
+                const chapter = c.chapterTitle ? `<span style="display:inline-block; font-size:10px; font-weight:800; background:#e0e7ff; color:#3730a3; padding:2px 8px; border:2px solid #000; margin-top:6px; box-shadow:1px 1px 0 #000;"><i class="fa-solid fa-bookmark" style="margin-right:3px;"></i>${escapeHtml(c.chapterTitle)}</span>` : '';
+                const snippet = c.snippet ? `<div style="font-size:12px; color:#222; margin-top:10px; padding:8px 12px; border-left:4px solid var(--yellow); background:#fafafa; font-weight:600; line-height:1.5; border-right:2px solid #000; border-top:2px solid #000; border-bottom:2px solid #000;">"${escapeHtml(c.snippet)}"</div>` : '';
                 const chunk = c.chunkOrderIndex > 0 ? `Đoạn ${c.chunkOrderIndex}` : 'Tóm tắt';
-                return `<div style="border:2px solid #000;box-shadow:2px 2px 0 #000;background:#fff8dc;padding:8px 10px;margin-top:4px;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:900;border:1px solid #000;background:#facc15;padding:2px 6px;">NGUỒN</span><span style="font-size:11px;font-weight:800;">${title}</span><span style="font-size:10px;color:#555;">${chunk}</span></div>${chapter}${snippet}</div>`;
+                return `<div class="citation-box" style="border:3px solid #000; box-shadow:4px 4px 0 #000; background:#fff; padding:15px; transition:all 0.2s ease; cursor:default;" 
+                             onmouseover="this.style.transform='translate(-2px, -2px)'; this.style.boxShadow='6px 6px 0 var(--pink)'; this.style.borderColor='var(--pink)';" 
+                             onmouseout="this.style.transform='none'; this.style.boxShadow='4px 4px 0 #000'; this.style.borderColor='#000';">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <span style="font-size:11px; font-weight:900; border:2px solid #000; background:var(--green); color:#000; padding:3px 8px; box-shadow:1px 1px 0 #000; display:flex; align-items:center; gap:4px;">
+                                    <i class="fa-solid fa-check-double"></i> NGUỒN ${idx + 1}
+                                </span>
+                                <span style="font-size:14px; font-weight:900; color:var(--blue);">${title}</span>
+                                <span style="font-size:10px; color:#000; background:#eee; padding:3px 8px; border:2px solid #000; font-weight:800; box-shadow:1px 1px 0 #000;">${chunk}</span>
+                            </div>
+                            ${chapter}
+                            ${snippet}
+                        </div>`;
             }).join('');
-            return `<div style="margin-top:10px;border-top:1px dashed #ddd;padding-top:8px;"><div style="font-size:11px;font-weight:900;color:#8b3d3d;text-transform:uppercase;margin-bottom:6px;">Nguồn tham khảo</div>${items}</div>`;
+            
+            return `<div style="margin-top:25px; border-top:3px dashed #ccc; padding-top:20px;">
+                        <div style="font-size:14px; font-weight:900; color:var(--black); text-transform:uppercase; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-quote-left" style="color:var(--pink); font-size:18px;"></i> CÁC NGUỒN ĐƯỢC TRÍCH DẪN
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:15px;">
+                            ${items}
+                        </div>
+                    </div>`;
+        }
+
+        function copyMessage(btn) {
+            const msgBody = btn.closest('.message-content').querySelector('.message-text');
+            if (msgBody) {
+                const rawText = msgBody.getAttribute('data-raw') || msgBody.textContent;
+                navigator.clipboard.writeText(rawText).then(() => {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> ĐÃ COPY';
+                    setTimeout(() => btn.innerHTML = originalHTML, 2000);
+                });
+            }
+        }
+        
+        function regenerateMessage() {
+            const s = sessions.find(x => x.id === currentSessionId);
+            if (!s || s.messages.length < 2) return;
+            
+            const lastUserMsgIndex = s.messages.map(m => m.role).lastIndexOf('user');
+            if (lastUserMsgIndex === -1) return;
+            
+            const text = s.messages[lastUserMsgIndex].text;
+            s.messages = s.messages.slice(0, lastUserMsgIndex);
+            
+            renderMessages();
+            document.getElementById('messageInput').value = text;
+            sendMessage();
+        }
+
+        function editMessage(btn) {
+            const msgBody = btn.closest('.message-content').querySelector('.message-text');
+            if (!msgBody) return;
+            const text = msgBody.getAttribute('data-raw') || msgBody.textContent;
+            
+            const s = sessions.find(x => x.id === currentSessionId);
+            if (s) {
+                const idx = s.messages.map(m => m.text).lastIndexOf(text);
+                if (idx !== -1) {
+                    s.messages = s.messages.slice(0, idx);
+                    renderMessages();
+                }
+            }
+            
+            const input = document.getElementById('messageInput');
+            input.value = text;
+            input.focus();
         }
 
         function renderMessageUI(role, text, citations) {
@@ -576,9 +642,28 @@
             div.className = isUser ? 'message message-user' : 'message message-bot';
             const senderName = isUser ? '@User.Identity?.Name' : 'Trợ lý AI';
             const icon = isUser ? 'fa-user' : 'fa-robot';
+            
+            const actionBar = isUser ? `
+                <div style="margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="copyMessage(this)" style="background:transparent; color:#666; border:none; font-weight:800; font-size:11px; cursor:pointer; transition:0.1s;" onmouseover="this.style.color='var(--black)';" onmouseout="this.style.color='#666';">
+                        <i class="fa-regular fa-copy"></i> COPY
+                    </button>
+                    <button type="button" onclick="editMessage(this)" style="background:transparent; color:#666; border:none; font-weight:800; font-size:11px; cursor:pointer; transition:0.1s;" onmouseover="this.style.color='var(--black)';" onmouseout="this.style.color='#666';">
+                        <i class="fa-solid fa-pen"></i> CHỈNH SỬA
+                    </button>
+                </div>` : `
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button type="button" onclick="copyMessage(this)" style="background:var(--white); color:var(--black); border:2px solid var(--black); padding:6px 12px; font-weight:800; font-size:11px; cursor:pointer; box-shadow:2px 2px 0 var(--black); transition:0.1s;" onmouseover="this.style.transform='translate(-1px,-1px)'; this.style.boxShadow='3px 3px 0 var(--black)';" onmouseout="this.style.transform='none'; this.style.boxShadow='2px 2px 0 var(--black)';">
+                        <i class="fa-regular fa-copy"></i> COPY
+                    </button>
+                    <button type="button" onclick="regenerateMessage()" style="background:var(--white); color:var(--black); border:2px solid var(--black); padding:6px 12px; font-weight:800; font-size:11px; cursor:pointer; box-shadow:2px 2px 0 var(--black); transition:0.1s;" onmouseover="this.style.transform='translate(-1px,-1px)'; this.style.boxShadow='3px 3px 0 var(--black)';" onmouseout="this.style.transform='none'; this.style.boxShadow='2px 2px 0 var(--black)';">
+                        <i class="fa-solid fa-rotate-right"></i> THỬ LẠI
+                    </button>
+                </div>`;
+
             const body = isUser
-                ? `<p class="message-text">${escapeHtml(text)}</p>`
-                : `<div class="message-text" style="font-weight:500;font-size:14px;line-height:1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations||[])}`;
+                ? `<p class="message-text" data-raw="${escapeHtml(text)}">${escapeHtml(text).replace(/\\n/g, '<br>')}</p>${actionBar}`
+                : `<div class="message-text" data-raw="${escapeHtml(text)}" style="font-weight:500;font-size:14px;line-height:1.6;">${formatMarkdown(text)}</div>${buildCitationHtml(citations||[])}${actionBar}`;
             div.innerHTML = `<div class="chat-avatar"><i class="fa-solid ${icon}"></i></div><div class="message-content"><div class="message-sender">${senderName}</div>${body}</div>`;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;

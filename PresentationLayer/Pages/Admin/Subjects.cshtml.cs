@@ -7,7 +7,8 @@ using BussinessLayer.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
-using PresentationLayer.Hubs;
+using PresentationLayer.SignalR;
+using PresentationLayer.ViewModels.Admin;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -15,9 +16,9 @@ namespace PresentationLayer.Pages.Admin
     {
         private readonly ISubjectService _subjectService;
         private readonly IUserService _userService;
-        private readonly IHubContext<CourseHub> _hubContext;
+        private readonly IHubContext<SignalRHub> _hubContext;
 
-        public SubjectsModel(ISubjectService subjectService, IUserService userService, IHubContext<CourseHub> hubContext)
+        public SubjectsModel(ISubjectService subjectService, IUserService userService, IHubContext<SignalRHub> hubContext)
         {
             _subjectService = subjectService;
             _userService = userService;
@@ -28,20 +29,10 @@ namespace PresentationLayer.Pages.Admin
         public SelectList Lecturers { get; set; }
 
         [BindProperty]
-        public string NewCode { get; set; } = string.Empty;
-        [BindProperty]
-        public string NewName { get; set; } = string.Empty;
-        [BindProperty]
-        public int? NewLecturerId { get; set; }
+        public SubjectCreateViewModel CreateModel { get; set; } = new SubjectCreateViewModel();
 
         [BindProperty]
-        public int UpdateId { get; set; }
-        [BindProperty]
-        public string UpdateCode { get; set; } = string.Empty;
-        [BindProperty]
-        public string UpdateName { get; set; } = string.Empty;
-        [BindProperty]
-        public int? UpdateLecturerId { get; set; }
+        public SubjectUpdateViewModel UpdateModel { get; set; } = new SubjectUpdateViewModel();
 
         public async Task OnGetAsync()
         {
@@ -52,9 +43,9 @@ namespace PresentationLayer.Pages.Admin
 
         public async Task<IActionResult> OnPostAddSubjectAsync()
         {
-            if (!string.IsNullOrWhiteSpace(NewCode) && !string.IsNullOrWhiteSpace(NewName))
+            if (!string.IsNullOrWhiteSpace(CreateModel.Code) && !string.IsNullOrWhiteSpace(CreateModel.Name))
             {
-                await _subjectService.AddSubjectAsync(NewCode, NewName, NewLecturerId);
+                await _subjectService.AddSubjectAsync(CreateModel.Code, CreateModel.Name, CreateModel.LecturerId);
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage();
@@ -62,9 +53,9 @@ namespace PresentationLayer.Pages.Admin
 
         public async Task<IActionResult> OnPostUpdateSubjectAsync()
         {
-            if (UpdateId > 0 && !string.IsNullOrWhiteSpace(UpdateCode) && !string.IsNullOrWhiteSpace(UpdateName))
+            if (UpdateModel.Id > 0 && !string.IsNullOrWhiteSpace(UpdateModel.Code) && !string.IsNullOrWhiteSpace(UpdateModel.Name))
             {
-                await _subjectService.UpdateSubjectAsync(UpdateId, UpdateCode, UpdateName, UpdateLecturerId);
+                await _subjectService.UpdateSubjectAsync(UpdateModel.Id, UpdateModel.Code, UpdateModel.Name, UpdateModel.LecturerId);
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage();

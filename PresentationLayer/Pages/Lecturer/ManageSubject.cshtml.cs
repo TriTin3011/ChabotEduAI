@@ -8,7 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
-using PresentationLayer.Hubs;
+using PresentationLayer.SignalR;
+using PresentationLayer.ViewModels.Lecturer;
 
 namespace PresentationLayer.Pages.Lecturer
 {
@@ -17,10 +18,10 @@ namespace PresentationLayer.Pages.Lecturer
         private readonly ISubjectService _subjectService;
         private readonly IDocumentService _documentService;
         private readonly IFileTextExtractorService _textExtractor;
-        private readonly IHubContext<CourseHub> _hubContext;
+        private readonly IHubContext<SignalRHub> _hubContext;
         private readonly IDocumentActivityLogService _activityLogService;
 
-        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor, IHubContext<CourseHub> hubContext, IDocumentActivityLogService activityLogService)
+        public ManageSubjectModel(ISubjectService subjectService, IDocumentService documentService, IFileTextExtractorService textExtractor, IHubContext<SignalRHub> hubContext, IDocumentActivityLogService activityLogService)
         {
             _subjectService = subjectService;
             _documentService = documentService;
@@ -31,23 +32,11 @@ namespace PresentationLayer.Pages.Lecturer
 
         public SubjectDto Subject { get; set; } = default!;
 
-        [BindProperty]
-        public string NewChapterTitle { get; set; } = string.Empty;
-
-        [BindProperty]
-        public int UpdateChapterId { get; set; }
-
-        [BindProperty]
-        public string UpdateChapterTitle { get; set; } = string.Empty;
-
-        [BindProperty]
-        public int? UploadChapterId { get; set; }
+        [BindProperty] public ChapterCreateViewModel CreateChapterModel { get; set; } = new ChapterCreateViewModel();
         
-        [BindProperty]
-        public string UploadTitle { get; set; } = string.Empty;
+        [BindProperty] public ChapterUpdateViewModel UpdateChapterModel { get; set; } = new ChapterUpdateViewModel();
         
-        [BindProperty]
-        public IFormFile? UploadFile { get; set; }
+        [BindProperty] public DocumentUploadViewModel UploadDocumentModel { get; set; } = new DocumentUploadViewModel();
 
         public bool IsOwner { get; set; } = false;
         
@@ -78,11 +67,11 @@ namespace PresentationLayer.Pages.Lecturer
 
         public async Task<IActionResult> OnPostAddChapterAsync(int id)
         {
-            if (!string.IsNullOrWhiteSpace(NewChapterTitle))
+            if (!string.IsNullOrWhiteSpace(CreateChapterModel.Title))
             {
                 var subject = await _subjectService.GetSubjectByIdAsync(id);
                 int order = (subject?.Chapters?.Count ?? 0) + 1;
-                await _subjectService.AddChapterAsync(id, NewChapterTitle, order);
+                await _subjectService.AddChapterAsync(id, CreateChapterModel.Title, order);
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage(new { id = id });
@@ -90,20 +79,19 @@ namespace PresentationLayer.Pages.Lecturer
 
         public async Task<IActionResult> OnPostUpdateChapterAsync(int id)
         {
-            if (UpdateChapterId > 0 && !string.IsNullOrWhiteSpace(UpdateChapterTitle))
+            if (UpdateChapterModel.Id > 0 && !string.IsNullOrWhiteSpace(UpdateChapterModel.Title))
             {
-                await _subjectService.UpdateChapterAsync(UpdateChapterId, UpdateChapterTitle);
+                await _subjectService.UpdateChapterAsync(UpdateChapterModel.Id, UpdateChapterModel.Title);
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
             }
             return RedirectToPage(new { id = id });
         }
 
-        [BindProperty]
-        public string DeleteChapterOption { get; set; } = "delete";
+        [BindProperty] public ChapterDeleteViewModel DeleteChapterModel { get; set; } = new ChapterDeleteViewModel();
 
         public async Task<IActionResult> OnPostDeleteChapterAsync(int id, int chapterId)
         {
-            bool keepDocuments = DeleteChapterOption == "keep";
+            bool keepDocuments = DeleteChapterModel.Option == "keep";
             await _subjectService.DeleteChapterWithOptionsAsync(chapterId, keepDocuments);
             await _hubContext.Clients.All.SendAsync("CourseChanged");
             return RedirectToPage(new { id = id });
@@ -111,19 +99,19 @@ namespace PresentationLayer.Pages.Lecturer
 
         public async Task<IActionResult> OnPostUploadFileAsync(int id)
         {
-            if (UploadFile != null && UploadFile.Length > 0 && !string.IsNullOrWhiteSpace(UploadTitle))
+            if (UploadDocumentModel.File != null && UploadDocumentModel.File.Length > 0 && !string.IsNullOrWhiteSpace(UploadDocumentModel.Title))
             {
                 var filesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files");
                 Directory.CreateDirectory(filesDir);
-                var filePath = Path.Combine(filesDir, UploadFile.FileName);
+                var filePath = Path.Combine(filesDir, UploadDocumentModel.File.FileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    await UploadFile.CopyToAsync(stream);
+                    await UploadDocumentModel.File.CopyToAsync(stream);
                 }
 
-                var fileUrl = $"/files/{UploadFile.FileName}";
-                var fileType = Path.GetExtension(UploadFile.FileName).TrimStart('.').ToLower();
+                var fileUrl = $"/files/{UploadDocumentModel.File.FileName}";
+                var fileType = Path.GetExtension(UploadDocumentModel.File.FileName).TrimStart('.').ToLower();
 
                 // Use FileTextExtractorService (supports txt, md, csv, pdf via PdfPig)
                 var extractedContent = _textExtractor.ExtractText(filePath);
@@ -135,15 +123,25 @@ namespace PresentationLayer.Pages.Lecturer
                     uploaderId = uId;
                 }
 
-                var documentId = await _documentService.AddDocumentAsync(UploadTitle, fileType, fileUrl, id, UploadChapterId, uploaderId, extractedContent);
+                var documentId = await _documentService.AddDocumentAsync(UploadDocumentModel.Title, fileType, fileUrl, id, UploadDocumentModel.ChapterId, uploaderId, extractedContent);
                 if (documentId > 0)
                 {
-                    // Tự động băm và nhúng ngay lập tức
-                    await _documentService.ProcessDocumentEmbeddingAsync(documentId);
+                    // Đọc ConnectionId từ Form (đề phòng BindProperty không bắt được do multipart)
+                    var connId = Request.Form["UploadDocumentModel.ConnectionId"].FirstOrDefault() ?? UploadDocumentModel.ConnectionId;
+
+                    // Tự động băm và nhúng ngay lập tức với progress callback
+                    await _documentService.ProcessDocumentEmbeddingAsync(documentId, async (current, total) => 
+                    {
+                        if (!string.IsNullOrEmpty(connId))
+                        {
+                            int percent = (int)System.Math.Round((double)current / total * 100);
+                            await _hubContext.Clients.Client(connId).SendAsync("UploadProgress", percent);
+                        }
+                    });
                     
                     if (uploaderId.HasValue)
                     {
-                        await _activityLogService.LogActivityAsync(id, documentId, UploadTitle, uploaderId.Value, "Uploaded");
+                        await _activityLogService.LogActivityAsync(id, documentId, UploadDocumentModel.Title, uploaderId.Value, "Uploaded");
                     }
                 }
                 await _hubContext.Clients.All.SendAsync("CourseChanged");
@@ -152,23 +150,19 @@ namespace PresentationLayer.Pages.Lecturer
             return RedirectToPage(new { id = id });
         }
 
-        [BindProperty]
-        public int MoveDocumentId { get; set; }
-
-        [BindProperty]
-        public int? MoveToChapterId { get; set; }
+        [BindProperty] public DocumentMoveViewModel MoveDocumentModel { get; set; } = new DocumentMoveViewModel();
 
         public async Task<IActionResult> OnPostMoveDocumentAsync(int id)
         {
-            if (MoveDocumentId > 0)
+            if (MoveDocumentModel.DocumentId > 0)
             {
-                var doc = await _documentService.GetDocumentByIdAsync(MoveDocumentId);
-                await _documentService.UpdateDocumentChapterAsync(MoveDocumentId, MoveToChapterId);
+                var doc = await _documentService.GetDocumentByIdAsync(MoveDocumentModel.DocumentId);
+                await _documentService.UpdateDocumentChapterAsync(MoveDocumentModel.DocumentId, MoveDocumentModel.ToChapterId);
                 
                 var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
                 if (doc != null && userIdClaim != null && int.TryParse(userIdClaim, out var uId))
                 {
-                    await _activityLogService.LogActivityAsync(id, MoveDocumentId, doc.Title, uId, "Moved");
+                    await _activityLogService.LogActivityAsync(id, MoveDocumentModel.DocumentId, doc.Title, uId, "Moved");
                 }
                 
                 await _hubContext.Clients.All.SendAsync("CourseChanged");

@@ -167,7 +167,7 @@ namespace BussinessLayer.Services
             return true;
         }
 
-        public async Task<bool> ProcessDocumentEmbeddingAsync(int documentId)
+        public async Task<bool> ProcessDocumentEmbeddingAsync(int documentId, System.Func<int, int, Task>? progressCallback = null)
         {
             var doc = await _documentRepository.GetDocumentByIdAsync(documentId);
             if (doc == null || string.IsNullOrWhiteSpace(doc.Content)) return false;
@@ -177,6 +177,8 @@ namespace BussinessLayer.Services
             int chunkSize = 200;
             var chunks = new List<DataAccessLayer.Entities.DocumentChunk>();
             int orderIndex = 1;
+            
+            int totalChunks = (int)Math.Ceiling((double)words.Length / chunkSize);
 
             for (int i = 0; i < words.Length; i += chunkSize)
             {
@@ -195,12 +197,23 @@ namespace BussinessLayer.Services
                     Embedding = new Pgvector.Vector(vector),
                     OrderIndex = orderIndex++
                 });
+                
+                if (progressCallback != null)
+                {
+                    await progressCallback(chunks.Count, totalChunks);
+                }
             }
 
             if (chunks.Any())
             {
                 await _documentRepository.AddDocumentChunksAsync(chunks);
             }
+            
+            if (progressCallback != null)
+            {
+                await progressCallback(1, 1); // Đảm bảo lên 100% khi hoàn thành
+            }
+            
             return true;
         }
 

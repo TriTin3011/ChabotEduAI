@@ -6,6 +6,7 @@ using BussinessLayer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.ViewModels.Admin;
 
 namespace PresentationLayer.Pages.Admin
 {
@@ -22,9 +23,7 @@ namespace PresentationLayer.Pages.Admin
         public IEnumerable<UserSubscriptionDto> Subscriptions { get; set; } = new List<UserSubscriptionDto>();
 
         // Bind for set plan modal
-        [BindProperty] public int SetPlanUserId   { get; set; }
-        [BindProperty] public string SetPlanValue { get; set; } = "Free";
-        [BindProperty] public string? SetPlanExpiry { get; set; } // string từ input date
+        [BindProperty] public SubscriptionUpdateViewModel UpdateModel { get; set; } = new SubscriptionUpdateViewModel();
 
         public async Task OnGetAsync()
         {
@@ -34,18 +33,18 @@ namespace PresentationLayer.Pages.Admin
         public async Task<IActionResult> OnPostSetPlanAsync()
         {
             DateTime? expiry = null;
-            if (!string.IsNullOrWhiteSpace(SetPlanExpiry) &&
-                DateTime.TryParse(SetPlanExpiry, out var parsedDate))
+            if (!string.IsNullOrWhiteSpace(UpdateModel.Expiry) &&
+                DateTime.TryParse(UpdateModel.Expiry, out var parsedDate))
             {
                 expiry = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
             }
-            else if (SetPlanValue != "Free")
+            else if (UpdateModel.PlanValue != "Free")
             {
                 // Mặc định 1 tháng nếu không nhập ngày
                 expiry = DateTime.UtcNow.AddMonths(1);
             }
 
-            await _subscriptionService.AdminSetPlanAsync(SetPlanUserId, SetPlanValue, expiry);
+            await _subscriptionService.AdminSetPlanAsync(UpdateModel.UserId, UpdateModel.PlanValue, expiry);
             TempData["SuccessMessage"] = "Cập nhật gói thành công!";
             return RedirectToPage();
         }

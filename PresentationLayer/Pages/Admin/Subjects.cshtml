@@ -125,15 +125,15 @@
         <form method="post" asp-page-handler="AddSubject">
             <div class="form-group">
                 <label>Mã Môn</label>
-                <input type="text" asp-for="NewCode" required placeholder="VD: PRN222" />
+                <input type="text" asp-for="CreateModel.Code" required placeholder="VD: PRN222" />
             </div>
             <div class="form-group">
                 <label>Tên Môn</label>
-                <input type="text" asp-for="NewName" required placeholder="VD: C# Nâng cao" />
+                <input type="text" asp-for="CreateModel.Name" required placeholder="VD: C# Nâng cao" />
             </div>
             <div class="form-group">
                 <label>Giảng viên phụ trách</label>
-                <select asp-for="NewLecturerId" asp-items="Model.Lecturers">
+                <select asp-for="CreateModel.LecturerId" asp-items="Model.Lecturers">
                     <option value="">-- Chưa phân công --</option>
                 </select>
             </div>
@@ -150,18 +150,18 @@
         <span class="close-btn" onclick="document.getElementById('updateSubjectModal').style.display='none'">&times;</span>
         <h2 style="font-weight: 900; margin-bottom: 20px; color: var(--blue);">CẬP NHẬT MÔN HỌC</h2>
         <form method="post" asp-page-handler="UpdateSubject">
-            <input type="hidden" id="updateSubId" asp-for="UpdateId" />
+            <input type="hidden" id="updateSubId" asp-for="UpdateModel.Id" />
             <div class="form-group">
                 <label>Mã Môn</label>
-                <input type="text" id="updateSubCode" asp-for="UpdateCode" required />
+                <input type="text" id="updateSubCode" asp-for="UpdateModel.Code" required />
             </div>
             <div class="form-group">
                 <label>Tên Môn</label>
-                <input type="text" id="updateSubName" asp-for="UpdateName" required />
+                <input type="text" id="updateSubName" asp-for="UpdateModel.Name" required />
             </div>
             <div class="form-group">
                 <label>Giảng viên phụ trách</label>
-                <select id="updateSubLecturer" asp-for="UpdateLecturerId" asp-items="Model.Lecturers">
+                <select id="updateSubLecturer" asp-for="UpdateModel.LecturerId" asp-items="Model.Lecturers">
                     <option value="">-- Chưa phân công --</option>
                 </select>
             </div>

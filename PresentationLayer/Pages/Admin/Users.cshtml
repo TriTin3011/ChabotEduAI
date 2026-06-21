@@ -111,19 +111,19 @@
         <form method="post" asp-page-handler="AddUser">
             <div class="form-group">
                 <label>Tài khoản</label>
-                <input type="text" asp-for="NewUsername" required />
+                <input type="text" asp-for="CreateModel.Username" required />
             </div>
             <div class="form-group">
-                <label>Email (Tùy chọn)</label>
-                <input type="email" asp-for="NewEmail" />
+                <label>Email</label>
+                <input type="email" asp-for="CreateModel.Email" />
             </div>
             <div class="form-group">
                 <label>Mật khẩu</label>
-                <input type="password" asp-for="NewPassword" required />
+                <input type="password" asp-for="CreateModel.Password" required />
             </div>
             <div class="form-group">
                 <label>Phân quyền</label>
-                <select asp-for="NewRole">
+                <select asp-for="CreateModel.Role">
                     <option value="Student">Sinh viên</option>
                     <option value="Lecturer">Giảng viên</option>
                     <option value="Admin">Admin</option>
@@ -142,22 +142,22 @@
         <span class="close-btn" onclick="document.getElementById('updateModal').style.display='none'">&times;</span>
         <h2 style="font-weight: 900; margin-bottom: 20px; color: var(--blue);">CẬP NHẬT NGƯỜI DÙNG</h2>
         <form method="post" asp-page-handler="UpdateUser">
-            <input type="hidden" id="updateId" asp-for="UpdateId" />
+            <input type="hidden" id="updateId" asp-for="UpdateModel.Id" />
             <div class="form-group">
                 <label>Tài khoản</label>
-                <input type="text" id="updateUsername" asp-for="UpdateUsername" required />
+                <input type="text" id="updateUsername" asp-for="UpdateModel.Username" required />
             </div>
             <div class="form-group">
                 <label>Email</label>
-                <input type="email" id="updateEmail" asp-for="UpdateEmail" />
+                <input type="email" id="updateEmail" asp-for="UpdateModel.Email" />
             </div>
             <div class="form-group">
                 <label>Mật khẩu (Bỏ trống nếu không đổi)</label>
-                <input type="password" asp-for="UpdatePassword" />
+                <input type="password" asp-for="UpdateModel.Password" />
             </div>
             <div class="form-group">
                 <label>Phân quyền</label>
-                <select id="updateRole" asp-for="UpdateRole">
+                <select id="updateRole" asp-for="UpdateModel.Role">
                     <option value="Student">Sinh viên</option>
                     <option value="Lecturer">Giảng viên</option>
                     <option value="Admin">Admin</option>

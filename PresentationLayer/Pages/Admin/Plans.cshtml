@@ -156,11 +156,11 @@
         <form method="post" asp-page-handler="Create">
             <div class="form-group">
                 <label>Tên gói *</label>
-                <input type="text" asp-for="NewName" required placeholder="VD: Gold, Enterprise..." />
+                <input type="text" asp-for="CreateModel.Name" required placeholder="VD: Gold, Enterprise..." />
             </div>
             <div class="form-group">
                 <label>Mô tả</label>
-                <textarea asp-for="NewDescription" placeholder="Mô tả ngắn về gói..."></textarea>
+                <textarea asp-for="CreateModel.Description" placeholder="Mô tả ngắn về gói..."></textarea>
             </div>
             <div class="form-group">
                 <label>Giá (VNĐ/tháng)</label>
@@ -168,7 +168,7 @@
                     <input type="checkbox" id="newIsFree" onchange="toggleFreePrice('new')" />
                     <label for="newIsFree" style="cursor:pointer; font-weight:800; font-size:13px;">Miễn phí (0đ)</label>
                 </div>
-                <input type="number" id="newPriceInput" asp-for="NewPrice" min="0" step="1000" placeholder="50000" />
+                <input type="number" id="newPriceInput" asp-for="CreateModel.Price" min="0" step="1000" placeholder="50000" />
             </div>
             <div class="form-group">
                 <label>Lượt hỏi/tháng</label>
@@ -176,16 +176,16 @@
                     <input type="checkbox" id="newIsUnlimited" onchange="toggleUnlimited('new')" />
                     <label for="newIsUnlimited" style="cursor:pointer; font-weight:800; font-size:13px;">Không giới hạn</label>
                 </div>
-                <input type="number" id="newLimitInput" asp-for="NewLimit" placeholder="5" min="1" />
+                <input type="number" id="newLimitInput" asp-for="CreateModel.Limit" placeholder="5" min="1" />
             </div>
             <div class="form-group">
                 <label>Thứ tự hiển thị</label>
-                <input type="number" asp-for="NewSortOrder" min="0" placeholder="0" />
+                <input type="number" asp-for="CreateModel.SortOrder" min="0" placeholder="0" />
             </div>
             <div class="form-group">
                 <div class="toggle-active">
-                    <input type="checkbox" asp-for="NewIsActive" checked />
-                    <label asp-for="NewIsActive" style="cursor:pointer;">Kích hoạt ngay</label>
+                    <input type="checkbox" asp-for="CreateModel.IsActive" checked />
+                    <label asp-for="CreateModel.IsActive" style="cursor:pointer;">Kích hoạt ngay</label>
                 </div>
             </div>
             <button type="submit" class="brutal-btn"
@@ -202,14 +202,14 @@
         <span class="close-btn" onclick="document.getElementById('editModal').style.display='none'">&times;</span>
         <h2 style="font-weight:900; margin-bottom:20px; color:var(--blue);">CẬP NHẬT GÓI</h2>
         <form method="post" asp-page-handler="Update">
-            <input type="hidden" id="editId" asp-for="EditId" />
+            <input type="hidden" id="editId" asp-for="UpdateModel.Id" />
             <div class="form-group">
                 <label>Tên gói *</label>
-                <input type="text" id="editName" asp-for="EditName" required />
+                <input type="text" id="editName" asp-for="UpdateModel.Name" required />
             </div>
             <div class="form-group">
                 <label>Mô tả</label>
-                <textarea id="editDescription" asp-for="EditDescription"></textarea>
+                <textarea id="editDescription" asp-for="UpdateModel.Description"></textarea>
             </div>
             <div class="form-group">
                 <label>Giá (VNĐ/tháng)</label>
@@ -217,7 +217,7 @@
                     <input type="checkbox" id="editIsFree" onchange="toggleFreePrice('edit')" />
                     <label for="editIsFree" style="cursor:pointer; font-weight:800; font-size:13px;">Miễn phí (0đ)</label>
                 </div>
-                <input type="number" id="editPrice" asp-for="EditPrice" min="0" step="1000" />
+                <input type="number" id="editPrice" asp-for="UpdateModel.Price" min="0" step="1000" />
             </div>
             <div class="form-group">
                 <label>Lượt hỏi/tháng</label>
@@ -225,16 +225,16 @@
                     <input type="checkbox" id="editIsUnlimited" onchange="toggleUnlimited('edit')" />
                     <label for="editIsUnlimited" style="cursor:pointer; font-weight:800; font-size:13px;">Không giới hạn</label>
                 </div>
-                <input type="number" id="editLimit" asp-for="EditLimit" min="1" />
+                <input type="number" id="editLimit" asp-for="UpdateModel.Limit" min="1" />
             </div>
             <div class="form-group">
                 <label>Thứ tự hiển thị</label>
-                <input type="number" id="editSortOrder" asp-for="EditSortOrder" min="0" />
+                <input type="number" id="editSortOrder" asp-for="UpdateModel.SortOrder" min="0" />
             </div>
             <div class="form-group">
                 <div class="toggle-active">
-                    <input type="checkbox" id="editIsActive" asp-for="EditIsActive" />
-                    <label for="EditIsActive" style="cursor:pointer;">Kích hoạt</label>
+                    <input type="checkbox" id="editIsActive" asp-for="UpdateModel.IsActive" />
+                    <label for="UpdateModel.IsActive" style="cursor:pointer;">Kích hoạt</label>
                 </div>
             </div>
             <button type="submit" class="brutal-btn"

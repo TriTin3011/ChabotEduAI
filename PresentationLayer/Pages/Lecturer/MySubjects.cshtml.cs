@@ -7,16 +7,17 @@ using BussinessLayer.Services;
 using System.Security.Claims;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
-using PresentationLayer.Hubs;
+using PresentationLayer.SignalR;
+using PresentationLayer.ViewModels.Lecturer;
 
 namespace PresentationLayer.Pages.Lecturer
 {
     public class MySubjectsModel : PageModel
     {
         private readonly ISubjectService _subjectService;
-        private readonly IHubContext<CourseHub> _hubContext;
+        private readonly IHubContext<SignalRHub> _hubContext;
 
-        public MySubjectsModel(ISubjectService subjectService, IHubContext<CourseHub> hubContext)
+        public MySubjectsModel(ISubjectService subjectService, IHubContext<SignalRHub> hubContext)
         {
             _subjectService = subjectService;
             _hubContext = hubContext;
@@ -24,12 +25,7 @@ namespace PresentationLayer.Pages.Lecturer
 
         public IEnumerable<SubjectDto> Subjects { get; set; } = new List<SubjectDto>();
 
-        [BindProperty]
-        public int UpdateId { get; set; }
-        [BindProperty]
-        public string UpdateCode { get; set; } = "";
-        [BindProperty]
-        public string UpdateName { get; set; } = "";
+        [BindProperty] public SubjectUpdateViewModel UpdateModel { get; set; } = new SubjectUpdateViewModel();
 
         public async Task OnGetAsync()
         {
@@ -43,13 +39,13 @@ namespace PresentationLayer.Pages.Lecturer
         public async Task<IActionResult> OnPostUpdateSubjectAsync()
         {
             var userIdStr = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
-            if (int.TryParse(userIdStr, out int userId) && UpdateId > 0 && !string.IsNullOrWhiteSpace(UpdateCode) && !string.IsNullOrWhiteSpace(UpdateName))
+            if (int.TryParse(userIdStr, out int userId) && UpdateModel.Id > 0 && !string.IsNullOrWhiteSpace(UpdateModel.Code) && !string.IsNullOrWhiteSpace(UpdateModel.Name))
             {
                 // Verify lecturer owns the subject
-                var subject = await _subjectService.GetSubjectByIdAsync(UpdateId);
+                var subject = await _subjectService.GetSubjectByIdAsync(UpdateModel.Id);
                 if (subject != null && subject.LecturerId == userId)
                 {
-                    await _subjectService.UpdateSubjectAsync(UpdateId, UpdateCode, UpdateName, userId);
+                    await _subjectService.UpdateSubjectAsync(UpdateModel.Id, UpdateModel.Code, UpdateModel.Name, userId);
                     await _hubContext.Clients.All.SendAsync("CourseChanged");
                 }
             }

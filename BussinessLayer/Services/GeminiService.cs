@@ -42,13 +42,18 @@ namespace BussinessLayer.Services
             var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
             
             var response = await _httpClient.PostAsync(url, jsonContent);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Gemini API Error: {response.StatusCode} - {errorBody}");
+            }
 
             var responseString = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<JsonElement>(responseString);
 
             var values = result.GetProperty("embedding").GetProperty("values").EnumerateArray()
                 .Select(x => x.GetSingle())
+                .Take(768)
                 .ToArray();
 
             return values;
@@ -106,15 +111,15 @@ namespace BussinessLayer.Services
 
                 // Trả về thông báo thân thiện thay vì dump lỗi kỹ thuật
                 if (statusCode == 429)
-                    return "⚠️ Trợ lý AI hiện đang quá tải, vui lòng thử lại sau vài giây.";
+                    return " Trợ lý AI hiện đang quá tải, vui lòng thử lại sau vài giây.";
                 if (statusCode == 503)
-                    return "⚠️ Dịch vụ AI tạm thời không khả dụng, vui lòng thử lại sau.";
+                    return " Dịch vụ AI tạm thời không khả dụng, vui lòng thử lại sau.";
 
                 var errorBody = await response.Content.ReadAsStringAsync();
                 return $"Lỗi khi gọi AI: {response.StatusCode} - {errorBody}";
             }
 
-            return "⚠️ Không thể kết nối đến dịch vụ AI sau nhiều lần thử. Vui lòng thử lại sau.";
+            return " Không thể kết nối đến dịch vụ AI sau nhiều lần thử. Vui lòng thử lại sau.";
         }
 
         public async Task<List<GeminiModelInfo>> GetAvailableModelsAsync()

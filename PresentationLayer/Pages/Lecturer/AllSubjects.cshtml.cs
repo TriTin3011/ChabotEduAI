@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
-using PresentationLayer.Hubs;
+using PresentationLayer.SignalR;
 
 namespace PresentationLayer.Pages.Lecturer
 {
@@ -14,9 +14,9 @@ namespace PresentationLayer.Pages.Lecturer
     public class AllSubjectsModel : PageModel
     {
         private readonly ISubjectService _subjectService;
-        private readonly IHubContext<CourseHub> _hubContext;
+        private readonly IHubContext<SignalRHub> _hubContext;
 
-        public AllSubjectsModel(ISubjectService subjectService, IHubContext<CourseHub> hubContext)
+        public AllSubjectsModel(ISubjectService subjectService, IHubContext<SignalRHub> hubContext)
         {
             _subjectService = subjectService;
             _hubContext = hubContext;
