@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -82,6 +82,11 @@ namespace BussinessLayer.Services
                 var conversationHistory = BuildConversationHistory(existingSession?.Messages);
 
                 var user = await _userRepository.GetUserByIdAsync(userId);
+                var effectivePlan = "Free";
+                var limit = GetMonthlyLimit("Free");
+                var remainingBefore = int.MaxValue;
+                var remainingAfter = int.MaxValue;
+
                 if (user != null)
                 {
                     var now = DateTime.UtcNow;
@@ -96,17 +101,19 @@ namespace BussinessLayer.Services
 
                     var planActive = user.SubscriptionPlan == "Free" ||
                                      (user.SubscriptionExpiry.HasValue && user.SubscriptionExpiry.Value >= now);
-                    var effectivePlan = planActive ? user.SubscriptionPlan : "Free";
+                    effectivePlan = planActive ? user.SubscriptionPlan : "Free";
 
-                    var limit = GetMonthlyLimit(effectivePlan);
+                    limit = GetMonthlyLimit(effectivePlan);
+                    remainingBefore = limit == int.MaxValue ? int.MaxValue : Math.Max(0, limit - user.MonthlyQuestionCount);
+                    remainingAfter = remainingBefore == int.MaxValue ? int.MaxValue : Math.Max(0, remainingBefore - 1);
+
                     if (user.MonthlyQuestionCount >= limit)
                     {
-                        var remaining = Math.Max(0, limit - user.MonthlyQuestionCount);
                         return new ChatResponseDto
                         {
                             Success = false,
                             OutOfQuota = true,
-                            Remaining = remaining,
+                            Remaining = remainingBefore,
                             Message = effectivePlan == "Free"
                                 ? $"Ban da dung het {limit} cau hoi mien phi trong thang nay. Nang cap goi de tiep tuc!"
                                 : $"Ban da dat gioi han {limit} cau hoi/thang cua goi {effectivePlan}."
@@ -177,7 +184,7 @@ namespace BussinessLayer.Services
                         return new ChatResponseDto
                         {
                             Success = false,
-                            Message = "Hay chon it nhat mot tai lieu truoc khi hoi trong che do gioi han theo tai lieu."
+                            Message = "Hãy chọn ít nhất một tài liệu trước khi hỏi trong chế độ giơi hạn theo tài liệu."
                         };
                     }
 
@@ -191,7 +198,7 @@ namespace BussinessLayer.Services
                     }
                 }
 
-                var prompt = BuildPrompt(request.Message, conversationHistory, contextText, request.RestrictToDocs);
+                var prompt = BuildPrompt(request.Message, conversationHistory, contextText, request.RestrictToDocs, effectivePlan, remainingAfter);
                 var replyText = await _geminiService.GenerateAnswerAsync(prompt, request.ModelName);
 
                 if (string.IsNullOrWhiteSpace(replyText))
@@ -241,17 +248,10 @@ namespace BussinessLayer.Services
                     await _chatRepository.UpdateSessionTitleAsync(session.Id, title);
                 }
 
-                var remainingAfter = int.MaxValue;
                 if (user != null)
                 {
                     user.MonthlyQuestionCount++;
                     await _userRepository.UpdateUserAsync(user);
-
-                    var planActive = user.SubscriptionPlan == "Free" ||
-                                     (user.SubscriptionExpiry.HasValue && user.SubscriptionExpiry.Value >= DateTime.UtcNow);
-                    var effectivePlan = planActive ? user.SubscriptionPlan : "Free";
-                    var limit = GetMonthlyLimit(effectivePlan);
-                    remainingAfter = limit == int.MaxValue ? int.MaxValue : Math.Max(0, limit - user.MonthlyQuestionCount);
                 }
 
                 return new ChatResponseDto
@@ -388,9 +388,23 @@ namespace BussinessLayer.Services
             string message,
             string conversationHistory,
             string contextText,
-            bool restrictToDocs)
+            bool restrictToDocs,
+            string planName,
+            int remainingQueries)
         {
             var promptSections = new List<string>();
+
+            // Them thong tin he thong ve goi cuoc va so luot hoi con lai
+            if (remainingQueries != int.MaxValue)
+            {
+                promptSections.Add(
+                    $"[THONG TIN HE THONG]\nNguoi dung dang su dung goi: {planName}.\nSo luot hoi con lai trong thang sau cau hoi nay: {remainingQueries} luot.\n(Neu nguoi dung hoi ve so luot con lai, hoac lien quan den gioi han, hay dung thong tin nay de tra loi hoac nhac nho. Khong can nhac den neu khong lien quan).");
+            }
+            else
+            {
+                promptSections.Add(
+                    $"[THONG TIN HE THONG]\nNguoi dung dang su dung goi: {planName} (Khong gioi han so luot hoi).");
+            }
 
             if (!string.IsNullOrWhiteSpace(conversationHistory))
             {

@@ -172,21 +172,15 @@ namespace BussinessLayer.Services
             var doc = await _documentRepository.GetDocumentByIdAsync(documentId);
             if (doc == null || string.IsNullOrWhiteSpace(doc.Content)) return false;
 
-            // Simple chunking strategy: split by 200 words approx
-            var words = doc.Content.Split(new[] { ' ', '\r', '\n', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
-            int chunkSize = 200;
+            // Context-Aware Chunking Strategy: split by semantics and maintain overlap
+            var textChunks = SplitTextByContext(doc.Content, maxWords: 300, overlapWords: 50);
+            
             var chunks = new List<DataAccessLayer.Entities.DocumentChunk>();
             int orderIndex = 1;
-            
-            int totalChunks = (int)Math.Ceiling((double)words.Length / chunkSize);
+            int totalChunks = textChunks.Count;
 
-            for (int i = 0; i < words.Length; i += chunkSize)
+            foreach (var chunkText in textChunks)
             {
-                int length = System.Math.Min(chunkSize, words.Length - i);
-                var chunkWords = new string[length];
-                System.Array.Copy(words, i, chunkWords, 0, length);
-                var chunkText = string.Join(" ", chunkWords);
-
                 // Call Gemini for embedding
                 var vector = await _geminiService.GetEmbeddingAsync(chunkText);
 
@@ -215,6 +209,83 @@ namespace BussinessLayer.Services
             }
             
             return true;
+        }
+
+        private List<string> SplitTextByContext(string content, int maxWords = 300, int overlapWords = 50)
+        {
+            var chunks = new List<string>();
+            if (string.IsNullOrWhiteSpace(content)) return chunks;
+
+            // Bước 1: Tách đoạn văn
+            var paragraphs = System.Text.RegularExpressions.Regex.Split(content, @"\n\s*\n");
+            
+            var currentChunkWords = new List<string>();
+            
+            foreach (var para in paragraphs)
+            {
+                if (string.IsNullOrWhiteSpace(para)) continue;
+
+                var paraWords = para.Split(new[] { ' ', '\r', '\n', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
+                
+                // Nếu đoạn văn dài hơn giới hạn, ta chia nhỏ nó thành các câu
+                if (paraWords.Length > maxWords)
+                {
+                    // Tách câu giữ nguyên dấu kết thúc câu
+                    var sentences = System.Text.RegularExpressions.Regex.Split(para, @"(?<=[.!?])\s+");
+                    
+                    foreach (var sentence in sentences)
+                    {
+                        if (string.IsNullOrWhiteSpace(sentence)) continue;
+                        
+                        var sentenceWords = sentence.Split(new[] { ' ', '\r', '\n', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
+                        
+                        // Nếu 1 câu dài hơn maxWords (hiếm nhưng có thể xảy ra ở PDF lỗi), tách ép theo số từ
+                        if (sentenceWords.Length > maxWords)
+                        {
+                            foreach (var word in sentenceWords)
+                            {
+                                currentChunkWords.Add(word);
+                                if (currentChunkWords.Count >= maxWords)
+                                {
+                                    chunks.Add(string.Join(" ", currentChunkWords));
+                                    var overlap = currentChunkWords.Skip(currentChunkWords.Count - overlapWords).ToList();
+                                    currentChunkWords.Clear();
+                                    currentChunkWords.AddRange(overlap);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (currentChunkWords.Count + sentenceWords.Length > maxWords && currentChunkWords.Count > 0)
+                            {
+                                chunks.Add(string.Join(" ", currentChunkWords));
+                                var overlap = currentChunkWords.Skip(currentChunkWords.Count - overlapWords).ToList();
+                                currentChunkWords.Clear();
+                                currentChunkWords.AddRange(overlap);
+                            }
+                            currentChunkWords.AddRange(sentenceWords);
+                        }
+                    }
+                }
+                else
+                {
+                    if (currentChunkWords.Count + paraWords.Length > maxWords && currentChunkWords.Count > 0)
+                    {
+                        chunks.Add(string.Join(" ", currentChunkWords));
+                        var overlap = currentChunkWords.Skip(currentChunkWords.Count - overlapWords).ToList();
+                        currentChunkWords.Clear();
+                        currentChunkWords.AddRange(overlap);
+                    }
+                    currentChunkWords.AddRange(paraWords);
+                }
+            }
+
+            if (currentChunkWords.Count > 0)
+            {
+                chunks.Add(string.Join(" ", currentChunkWords));
+            }
+
+            return chunks;
         }
 
         public async Task<bool> DeleteDocumentAsync(int id)
