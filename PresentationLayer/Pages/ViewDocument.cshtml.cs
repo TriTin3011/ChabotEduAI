@@ -14,19 +14,18 @@ namespace PresentationLayer.Pages
     public class ViewDocumentModel : PageModel
     {
         private readonly IDocumentService _documentService;
-        private readonly DataAccessLayer.Repositories.IDocumentRepository _documentRepository;
         private readonly ISubjectService _subjectService;
 
-        public ViewDocumentModel(IDocumentService documentService, DataAccessLayer.Repositories.IDocumentRepository documentRepository, ISubjectService subjectService)
+        public ViewDocumentModel(IDocumentService documentService, ISubjectService subjectService)
         {
             _documentService = documentService;
-            _documentRepository = documentRepository;
             _subjectService = subjectService;
         }
 
         public DocumentDto Document { get; set; } = new DocumentDto();
         public string TextContent { get; set; } = string.Empty;
         public List<string> SimulatedChunks { get; set; } = new List<string>();
+        public bool CanViewChunks { get; set; } = false;
 
         [TempData]
         public string? SuccessMessage { get; set; }
@@ -46,10 +45,10 @@ namespace PresentationLayer.Pages
 
             var role = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
             
-            bool canViewChunks = false;
+            CanViewChunks = false;
             if (role == "Admin")
             {
-                canViewChunks = true;
+                CanViewChunks = true;
             }
             else if (role == "Lecturer" && doc.SubjectId.HasValue)
             {
@@ -59,17 +58,17 @@ namespace PresentationLayer.Pages
                     var subject = await _subjectService.GetSubjectByIdAsync(doc.SubjectId.Value);
                     if (subject != null && subject.LecturerId == userId)
                     {
-                        canViewChunks = true;
+                        CanViewChunks = true;
                     }
                 }
             }
 
-            if (canViewChunks)
+            if (CanViewChunks)
             {
-                var dbChunks = await _documentRepository.GetDocumentChunksAsync(id);
+                var dbChunks = await _documentService.GetDocumentChunksAsync(id);
                 if (dbChunks != null && dbChunks.Any())
                 {
-                    SimulatedChunks = dbChunks.OrderBy(c => c.OrderIndex).Select(c => c.Content).ToList();
+                    SimulatedChunks = dbChunks.ToList();
                 }
             }
 

@@ -17,6 +17,7 @@ namespace BussinessLayer.Services
         Task<bool> ProcessDocumentAsync(int documentId, string extractedContent);
         Task<bool> ProcessDocumentEmbeddingAsync(int documentId, System.Func<int, int, Task>? progressCallback = null);
         Task<bool> UpdateDocumentChapterAsync(int documentId, int? chapterId);
+        Task<IEnumerable<string>> GetDocumentChunksAsync(int id);
         Task<bool> DeleteDocumentAsync(int id);
     }
 }

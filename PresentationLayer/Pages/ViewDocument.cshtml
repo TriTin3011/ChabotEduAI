@@ -46,7 +46,7 @@
                             </span>
                         }
                     </div>
-                </div>                <a href="@Model.Document?.FileUrl" target="_blank" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 3px solid var(--black); padding: 10px 20px; font-weight: 900; text-decoration: none; box-shadow: 4px 4px 0px var(--black);">
+                </div>                <a href="@Model.Document?.FileUrl" download target="_blank" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 3px solid var(--black); padding: 10px 20px; font-weight: 900; text-decoration: none; box-shadow: 4px 4px 0px var(--black);">
                     <i class="fa-solid fa-download"></i> TẢI XUỐNG
                 </a>
             </div>
@@ -56,7 +56,7 @@
                 <div id="tab-content" onclick="switchTab('content')" style="padding: 10px 20px; font-weight: 900; cursor: pointer; background: var(--black); color: var(--white); border: 3px solid var(--black); border-bottom: none; margin-right: 10px;">
                     <i class="fa-solid fa-file-lines"></i> NỘI DUNG
                 </div>
-                @if (!isStudent)
+                @if (Model.CanViewChunks)
                 {
                     <div id="tab-chunks" onclick="switchTab('chunks')" style="padding: 10px 20px; font-weight: 900; cursor: pointer; background: var(--white); color: var(--black); border: 3px solid var(--black); border-bottom: none;">
                         <i class="fa-solid fa-cubes"></i> VECTOR CHUNKS @(hasChunks ? $"({Model.SimulatedChunks.Count})" : "")
@@ -101,7 +101,7 @@
             </div>
 
             <!-- TAB: VECTOR CHUNKS -->
-            @if (!isStudent)
+            @if (Model.CanViewChunks)
             {
             <div id="panel-chunks" style="display: none;">
                 @if (!string.IsNullOrEmpty(Model.SuccessMessage))
@@ -161,7 +161,7 @@
                     </div>
                 }
             </div>
-            } @* end @if (!isStudent) *@
+            } @* end @if (Model.CanViewChunks) *@
 
         </div>
     </div>
@@ -169,20 +169,21 @@
 
 <script>
     function switchTab(tab) {
+        var panelContent = document.getElementById('panel-content');
+        var panelChunks = document.getElementById('panel-chunks');
+        var tabContent = document.getElementById('tab-content');
+        var tabChunks = document.getElementById('tab-chunks');
+
         if(tab === 'content') {
-            document.getElementById('panel-content').style.display = 'block';
-            document.getElementById('panel-chunks').style.display = 'none';
-            document.getElementById('tab-content').style.background = 'var(--black)';
-            document.getElementById('tab-content').style.color = 'var(--white)';
-            document.getElementById('tab-chunks').style.background = 'var(--white)';
-            document.getElementById('tab-chunks').style.color = 'var(--black)';
+            if(panelContent) panelContent.style.display = 'block';
+            if(panelChunks) panelChunks.style.display = 'none';
+            if(tabContent) { tabContent.style.background = 'var(--black)'; tabContent.style.color = 'var(--white)'; }
+            if(tabChunks) { tabChunks.style.background = 'var(--white)'; tabChunks.style.color = 'var(--black)'; }
         } else {
-            document.getElementById('panel-content').style.display = 'none';
-            document.getElementById('panel-chunks').style.display = 'block';
-            document.getElementById('tab-chunks').style.background = 'var(--black)';
-            document.getElementById('tab-chunks').style.color = 'var(--white)';
-            document.getElementById('tab-content').style.background = 'var(--white)';
-            document.getElementById('tab-content').style.color = 'var(--black)';
+            if(panelContent) panelContent.style.display = 'none';
+            if(panelChunks) panelChunks.style.display = 'block';
+            if(tabChunks) { tabChunks.style.background = 'var(--black)'; tabChunks.style.color = 'var(--white)'; }
+            if(tabContent) { tabContent.style.background = 'var(--white)'; tabContent.style.color = 'var(--black)'; }
         }
     }
 </script>

@@ -105,12 +105,15 @@ namespace BussinessLayer.Services
                     if (rId == null) { slideNum++; continue; }
 
                     var slidePart = (SlidePart)presentationPart.GetPartById(rId);
-                    // Extract all text shapes from the slide
-                    foreach (var shape in slidePart.Slide.Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>())
+                    if (slidePart?.Slide != null)
                     {
-                        var text = shape.InnerText;
-                        if (!string.IsNullOrWhiteSpace(text))
-                            sb.AppendLine(text);
+                        // Extract all text shapes from the slide
+                        foreach (var shape in slidePart.Slide.Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>())
+                        {
+                            var text = shape.InnerText;
+                            if (!string.IsNullOrWhiteSpace(text))
+                                sb.AppendLine(text);
+                        }
                     }
                     slideNum++;
                 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BussinessLayer.DTOs;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.IRepositories;
 using Pgvector;
 
 namespace BussinessLayer.Services

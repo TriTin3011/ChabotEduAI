@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using DataAccessLayer.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -10,11 +9,11 @@ namespace PresentationLayer.Pages.Auth
     [Authorize]
     public class ProfileModel : PageModel
     {
-        private readonly IUserRepository _userRepository;
+        private readonly BussinessLayer.Services.IUserService _userService;
 
-        public ProfileModel(IUserRepository userRepository)
+        public ProfileModel(BussinessLayer.Services.IUserService userService)
         {
-            _userRepository = userRepository;
+            _userService = userService;
         }
 
         public string Username { get; set; } = string.Empty;
@@ -32,7 +31,7 @@ namespace PresentationLayer.Pages.Auth
             var username = User.Identity?.Name;
             if (string.IsNullOrEmpty(username)) return RedirectToPage("/Auth/Login");
 
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _userService.GetUserByUsernameAsync(username);
             if (user == null) return RedirectToPage("/Auth/Login");
 
             Username = user.Username;
@@ -47,7 +46,7 @@ namespace PresentationLayer.Pages.Auth
             var username = User.Identity?.Name;
             if (string.IsNullOrEmpty(username)) return RedirectToPage("/Auth/Login");
 
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _userService.GetUserByUsernameAsync(username);
             if (user == null) return RedirectToPage("/Auth/Login");
 
             // Populate view data again
@@ -69,16 +68,14 @@ namespace PresentationLayer.Pages.Auth
                 return Page();
             }
 
-            // The system uses plain text passwords for now
-            if (user.PasswordHash != PasswordChangeModel.CurrentPassword)
+            // Change password via service
+            var changed = await _userService.ChangePasswordAsync(username, PasswordChangeModel.CurrentPassword, PasswordChangeModel.NewPassword);
+            if (!changed)
             {
                 Message = "Mật khẩu hiện tại không đúng.";
                 IsSuccess = false;
                 return Page();
             }
-
-            user.PasswordHash = PasswordChangeModel.NewPassword;
-            await _userRepository.UpdateUserAsync(user);
 
             Message = "Đổi mật khẩu thành công!";
             IsSuccess = true;

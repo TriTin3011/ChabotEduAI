@@ -86,12 +86,10 @@
                                     </button>
                                     @if(!subject.IsDeleted)
                                     {
-                                        <form method="post" asp-page-handler="DeleteSubject">
-                                            <input type="hidden" name="id" value="@subject.Id" />
-                                            <button type="submit" class="brutal-btn" style="background-color: #ff4d4f; color: white; border: 2px solid var(--black); padding: 5px 10px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0px var(--black);">
-                                                <i class="fa-solid fa-trash"></i> XÓA
-                                            </button>
-                                        </form>
+                                        <button type="button" class="brutal-btn" style="background-color: #ff4d4f; color: white; border: 2px solid var(--black); padding: 5px 10px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0px var(--black);" 
+                                                onclick="openDeleteSubjectModal(@subject.Id, '@subject.Name')">
+                                            <i class="fa-solid fa-trash"></i> XÓA
+                                        </button>
                                     }
                                     else
                                     {
@@ -172,6 +170,26 @@
     </div>
 </div>
 
+<!-- Modal Delete -->
+<div id="deleteSubjectModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="document.getElementById('deleteSubjectModal').style.display='none'">&times;</span>
+        <h2 style="font-weight: 900; margin-bottom: 20px; color: #ff4d4f;">XÁC NHẬN XÓA</h2>
+        <p style="font-weight: 700; margin-bottom: 20px; font-size: 16px;">Bạn có chắc chắn muốn xóa môn học <span id="deleteSubNameText" style="color: var(--pink); font-weight: 900;"></span> không?</p>
+        <form method="post" asp-page-handler="DeleteSubject">
+            <input type="hidden" id="deleteSubId" name="id" />
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="brutal-btn" style="flex: 1; background-color: #ccc; color: var(--black); border: 2px solid var(--black); padding: 10px; font-weight: 900; box-shadow: 2px 2px 0px var(--black); cursor: pointer;" onclick="document.getElementById('deleteSubjectModal').style.display='none'">
+                    HỦY
+                </button>
+                <button type="submit" class="brutal-btn" style="flex: 1; background-color: #ff4d4f; color: var(--white); border: 2px solid var(--black); padding: 10px; font-weight: 900; box-shadow: 2px 2px 0px var(--black); cursor: pointer;">
+                    <i class="fa-solid fa-trash"></i> XÁC NHẬN
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         function openUpdateSubjectModal(id, code, name, lecturerId) {
@@ -180,6 +198,12 @@
             document.getElementById('updateSubName').value = name;
             document.getElementById('updateSubLecturer').value = lecturerId;
             document.getElementById('updateSubjectModal').style.display = 'flex';
+        }
+
+        function openDeleteSubjectModal(id, name) {
+            document.getElementById('deleteSubId').value = id;
+            document.getElementById('deleteSubNameText').innerText = name;
+            document.getElementById('deleteSubjectModal').style.display = 'flex';
         }
 
         // SignalR realtime update

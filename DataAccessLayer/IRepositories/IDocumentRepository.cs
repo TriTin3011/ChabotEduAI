@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using DataAccessLayer.Entities;
 using Pgvector;
 
-namespace DataAccessLayer.Repositories
+namespace DataAccessLayer.IRepositories
 {
     public interface IDocumentRepository
     {

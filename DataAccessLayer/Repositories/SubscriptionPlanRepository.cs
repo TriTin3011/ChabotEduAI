@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DataAccessLayer.Entities;
+using DataAccessLayer.IRepositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataAccessLayer.Repositories

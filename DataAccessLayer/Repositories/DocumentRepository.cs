@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DataAccessLayer.Entities;
+using DataAccessLayer.IRepositories;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
 

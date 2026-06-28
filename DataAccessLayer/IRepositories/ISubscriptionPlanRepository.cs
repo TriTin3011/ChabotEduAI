@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using DataAccessLayer.Entities;
 
-namespace DataAccessLayer.Repositories
+namespace DataAccessLayer.IRepositories
 {
     public interface ISubscriptionPlanRepository
     {

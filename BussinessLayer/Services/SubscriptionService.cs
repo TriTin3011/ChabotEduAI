@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BussinessLayer.DTOs;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.IRepositories;
 
 namespace BussinessLayer.Services
 {

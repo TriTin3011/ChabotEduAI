@@ -29,12 +29,18 @@
                     <button type="button" onclick="document.getElementById('activityLogModal').style.display='flex'" class="brutal-btn" style="background-color: #fff; color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
                         <i class="fa-solid fa-clock-rotate-left"></i> LỊCH SỬ
                     </button>
-                    <button type="button" onclick="openChapterModal(0, '')" class="brutal-btn" style="background-color: var(--green); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
-                        <i class="fa-solid fa-plus"></i> THÊM CHƯƠNG
-                    </button>
-                    <button type="button" onclick="openUploadModal()" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
-                        <i class="fa-solid fa-upload"></i> TẢI TÀI LIỆU
-                    </button>
+                    @if (!Model.IsAdmin)
+                    {
+                        <button type="button" onclick="openChapterModal(0, '')" class="brutal-btn" style="background-color: var(--green); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
+                            <i class="fa-solid fa-plus"></i> THÊM CHƯƠNG
+                        </button>
+                    }
+                    @if (!Model.IsAdmin)
+                    {
+                        <button type="button" onclick="openUploadModal()" class="brutal-btn" style="background-color: var(--yellow); color: var(--black); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; box-shadow: 2px 2px 0px var(--black);">
+                            <i class="fa-solid fa-upload"></i> TẢI TÀI LIỆU
+                        </button>
+                    }
                 </div>
             }
         </div>
@@ -68,10 +74,10 @@
                                     <a href="/ViewDocument?id=@doc.Id" style="font-weight: 800; font-size: 12px; color: var(--blue); white-space: nowrap;">
                                         <i class="fa-solid fa-eye"></i> Xem
                                     </a>
-                                    <a href="@doc.FileUrl" target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
+                                    <a href="@doc.FileUrl" download target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
                                         <i class="fa-solid fa-download"></i> Tải
                                     </a>
-                                    @if(Model.IsOwner)
+                                    @if(Model.IsOwner && !Model.IsAdmin)
                                     {
                                         <button type="button" onclick="openMoveDocModal(@doc.Id, '@doc.Title')" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: var(--green); padding: 0;">
                                             <i class="fa-solid fa-arrows-up-down-left-right"></i> Chuyển
@@ -102,7 +108,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
                         <h2 style="font-weight: 900; font-size: 18px; color: var(--pink);">@chapter.Title</h2>
 
-                        @if(Model.IsOwner)
+                        @if(Model.IsOwner && !Model.IsAdmin)
                         {
                             <div style="display: flex; gap: 5px;">
                                 <button type="button" onclick="openChapterModal(@chapter.Id, '@chapter.Title')" class="brutal-btn" style="background-color: var(--white); color: var(--black); border: 2px solid var(--black); padding: 4px 10px; font-weight: 800; font-size: 12px; box-shadow: 2px 2px 0px var(--black);">
@@ -136,10 +142,10 @@
                                         <a href="/ViewDocument?id=@doc.Id" style="font-weight: 800; font-size: 12px; color: var(--blue); white-space: nowrap;">
                                             <i class="fa-solid fa-eye"></i> Xem
                                         </a>
-                                        <a href="@doc.FileUrl" target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
+                                        <a href="@doc.FileUrl" download target="_blank" style="font-weight: 800; font-size: 12px; color: var(--pink); white-space: nowrap;">
                                             <i class="fa-solid fa-download"></i> Tải
                                         </a>
-                                        @if(Model.IsOwner)
+                                        @if(Model.IsOwner && !Model.IsAdmin)
                                         {
                                             <button type="button" onclick="openMoveDocModal(@doc.Id, '@doc.Title')" style="background: none; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: var(--green); padding: 0;">
                                                 <i class="fa-solid fa-arrows-up-down-left-right"></i> Chuyển

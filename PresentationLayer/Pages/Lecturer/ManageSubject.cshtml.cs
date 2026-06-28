@@ -39,6 +39,7 @@ namespace PresentationLayer.Pages.Lecturer
         [BindProperty] public DocumentUploadViewModel UploadDocumentModel { get; set; } = new DocumentUploadViewModel();
 
         public bool IsOwner { get; set; } = false;
+        public bool IsAdmin { get; set; } = false;
         
         public List<DocumentActivityLogDto> ActivityLogs { get; set; } = new();
 
@@ -49,11 +50,20 @@ namespace PresentationLayer.Pages.Lecturer
 
             // Lấy LecturerId từ claims
             var userIdStr = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+            if (role == "Admin")
+            {
+                IsAdmin = true;
+                IsOwner = true;
+            }
+
             if (int.TryParse(userIdStr, out int userId))
             {
-                if (Subject.LecturerId == userId || User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value == "Admin")
+                if (Subject.LecturerId == userId)
                 {
                     IsOwner = true;
+                    IsAdmin = false; // Lecturer has full rights, even if they are Admin
                 }
             }
             

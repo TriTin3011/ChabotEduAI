@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BussinessLayer.DTOs;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.IRepositories;
 
 namespace BussinessLayer.Services
 {
@@ -291,6 +292,12 @@ namespace BussinessLayer.Services
         public async Task<bool> DeleteDocumentAsync(int id)
         {
             return await _documentRepository.DeleteDocumentAsync(id);
+        }
+
+        public async Task<IEnumerable<string>> GetDocumentChunksAsync(int id)
+        {
+            var chunks = await _documentRepository.GetDocumentChunksAsync(id);
+            return chunks?.OrderBy(c => c.OrderIndex).Select(c => c.Content) ?? new List<string>();
         }
     }
 }

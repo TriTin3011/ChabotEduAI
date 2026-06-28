@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BussinessLayer.DTOs;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.IRepositories;
 
 namespace BussinessLayer.Services
 {
@@ -88,6 +89,35 @@ namespace BussinessLayer.Services
             if (user == null) return false;
 
             user.IsDeleted = true;
+            await _userRepository.UpdateUserAsync(user);
+            return true;
+        }
+
+        public async Task<bool> RestoreUserAsync(int id)
+        {
+            var user = await _userRepository.GetUserByIdAsync(id);
+            if (user == null) return false;
+
+            user.IsDeleted = false;
+            await _userRepository.UpdateUserAsync(user);
+            return true;
+        }
+
+        public async Task<UserDto?> GetUserByUsernameAsync(string username)
+        {
+            var user = await _userRepository.GetUserByUsernameAsync(username);
+            if (user == null) return null;
+            return new UserDto { Id = user.Id, Username = user.Username, Role = user.Role, Email = user.Email, IsDeleted = user.IsDeleted };
+        }
+
+        public async Task<bool> ChangePasswordAsync(string username, string currentPassword, string newPassword)
+        {
+            var user = await _userRepository.GetUserByUsernameAsync(username);
+            if (user == null) return false;
+
+            if (user.PasswordHash != currentPassword) return false;
+
+            user.PasswordHash = newPassword;
             await _userRepository.UpdateUserAsync(user);
             return true;
         }
